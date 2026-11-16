@@ -1,6 +1,7 @@
 import streamlit as st
 
 from datetime import datetime
+from typing import Any, Callable
 
 from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task, Scheduler
 from suggestions import default_start_times, suggest_from_guides, suggestion_to_task
@@ -48,6 +49,19 @@ if "owner" not in st.session_state:
     st.session_state.owner = Owner(name="Jordan")
 owner: Owner = st.session_state.owner
 
+
+def choose(label: str, items: list[Any], format_func: Callable[[Any], str], **kwargs: Any) -> Any:
+    """A selectbox over pets or tasks that returns the real object from ``items``.
+
+    st.selectbox hands back a *copy* of an option object, so changing the result (adding a
+    task to a "selected" pet, completing a "selected" task) would change the copy and be
+    lost. This selects by ``id`` and looks the original up. ``None`` is allowed as an item.
+    """
+    by_id = {getattr(item, "id", None): item for item in items}
+    picked = st.selectbox(label, list(by_id), format_func=lambda key: format_func(by_id[key]), **kwargs)
+    return by_id[picked]
+
+
 owner.name = st.text_input("Owner name", value=owner.name)
 
 st.subheader("Add a Pet")
@@ -83,7 +97,7 @@ else:
 st.subheader("Schedule a Task")
 if owner.pets:
     with st.form("add_task_form"):
-        pet_choice = st.selectbox("Pet", owner.list_pets(), format_func=lambda p: p.name)
+        pet_choice = choose("Pet", owner.list_pets(), lambda p: p.name)
         description = st.text_input("Task description", value="Morning walk")
         col1, col2 = st.columns(2)
         with col1:
@@ -123,7 +137,7 @@ st.caption(
     "They are general information, not veterinary advice. Nothing is added until you click Add."
 )
 if owner.pets:
-    suggest_pet = st.selectbox("Pet", owner.list_pets(), format_func=lambda p: p.name, key="suggest_pet")
+    suggest_pet = choose("Pet", owner.list_pets(), lambda p: p.name, key="suggest_pet")
     suggest_day = st.date_input("Start date", value=datetime.now().date(), key="suggest_day")
     if suggest_pet.species is Species.ANY:
         st.caption("This pet's species is 'Any', so suggestions draw on dog and cat guides. "
@@ -208,8 +222,8 @@ all_tasks = scheduler.get_all_tasks()
 if all_tasks:
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        pet_filter = st.selectbox(
-            "Pet", [None] + owner.list_pets(), format_func=lambda p: "All pets" if p is None else p.name
+        pet_filter = choose(
+            "Pet", [None] + owner.list_pets(), lambda p: "All pets" if p is None else p.name
         )
     with col2:
         status_filter = st.selectbox("Status", ["All", "Pending", "Completed"])
@@ -248,10 +262,10 @@ if all_tasks:
     pending = scheduler.sort_by_time(scheduler.filter_tasks(completed=False))
     if pending:
         with st.form("complete_task_form"):
-            to_complete = st.selectbox(
+            to_complete = choose(
                 "Mark a task complete",
                 pending,
-                format_func=lambda t: f"{t.start_time:%b %d %H:%M} - {t.description} ({t.pet.name if t.pet else '-'})",
+                lambda t: f"{t.start_time:%b %d %H:%M} - {t.description} ({t.pet.name if t.pet else '-'})",
             )
             if st.form_submit_button("Mark complete"):
                 next_task = to_complete.mark_complete()
