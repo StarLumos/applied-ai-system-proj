@@ -1,28 +1,23 @@
 ---
-title: Dog Feeding and Water
+title: Dog Feeding Frequency
 species: dog
-tags: [feeding, meals, water, weight]
-source: American Veterinary Medical Association / veterinary nutrition guidance
-source_url: https://www.avma.org
+tags: [feeding, meals, portions, calories]
+source: VCA Animal Hospitals, "Nutrition - General Feeding Guidelines for Dogs"
+source_url: https://vcahospitals.com/know-your-pet/nutrition-general-feeding-guidelines-for-dogs
+source_url_2: https://vcahospitals.com/know-your-pet/feeding-times-and-frequency-for-your-dog
+verified: yes (both pages read in full 2026-11-15)
 ---
 
-# Dog Feeding and Water
+# Dog Feeding Frequency
 
-## Meal schedule
-- Adult dogs are usually fed twice a day, about 8-12 hours apart. Some owners feed once a day, but two meals are easier on the stomach for many dogs, especially large deep-chested breeds.
-- Puppies need more frequent meals: about 3-4 a day until around 6 months old, then 2 a day.
-- Keep meal times consistent. A predictable routine helps digestion and house training.
-
-## Portions
-- Follow the feeding guide on the food label as a starting point, then adjust based on your dog's body condition. You should be able to feel the ribs without seeing them clearly.
-- Treats should make up no more than about 10% of daily calories.
-- Obesity is one of the most common health problems in dogs. Ask your vet to confirm a target weight and portion size.
-
-## Water
-- Fresh, clean water should be available at all times. Refill and wash the bowl daily.
-- Dogs may drink more in hot weather or after exercise. A sudden large change in drinking should be checked by a vet.
+- For most pet dogs, feeding once or twice per day is recommended. Many dogs benefit from equally divided meals, two to three times per day.
+- The most common recommendation is to feed at least two meals per day, since the stomach empties within a few hours. Some dogs are less food motivated and do fine with one meal per day.
+- Some medical conditions, such as diabetes, require that a dog eat at specific times during the day.
+- Package feeding guidelines are a starting point for a healthy dog. Your veterinary team can do an energy calculation for a more individualized calorie recommendation.
+- Obesity can result from an excess of calories, whether you meal-feed or free-feed.
+- Puppies: three to four meals a day can be helpful, and free-choice feeding is not recommended (see the puppy care guide).
 
 ## Suggested tasks
+These are suggested defaults, not statements from the sources.
 - Breakfast feeding, 10 minutes, daily, high priority.
 - Dinner feeding, 10 minutes, daily, high priority.
-- Refresh water bowl, 5 minutes, daily, medium priority.

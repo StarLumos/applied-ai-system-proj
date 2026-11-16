@@ -2,34 +2,36 @@
 title: Puppy Care Basics
 species: dog
 life_stage: puppy
-tags: [puppy, training, potty, socialization, feeding, vaccines]
-source: American Veterinary Medical Association / American Kennel Club
-source_url: https://www.avma.org
+tags: [puppy, vaccines, socialization, exercise, feeding]
+source: VCA Animal Hospitals, "Puppy - Recommendations for New Owners Part I - Veterinary Care"
+source_url: https://vcahospitals.com/know-your-pet/puppy---recommendations-for-new-owners-part-i---veterinary-care
+source_url_2: https://www.akc.org/expert-advice/training/puppy-socialization/
+source_url_3: https://vcahospitals.com/know-your-pet/feeding-times-and-frequency-for-your-dog
+verified: yes for vaccines, socialization, feeding and exercise (pages read 2026-11-15; the VCA vet-care page was read verbatim for its first ~40,000 of ~52,000 characters)
 ---
 
 # Puppy Care Basics
 
-## Feeding
-- Feed a puppy-formulated food, 3-4 small meals a day until about 6 months old, then 2 meals a day.
-- Large-breed puppies should eat food formulated for large-breed puppies to support slower, healthier growth.
+## Vet care (VCA)
+- Most puppies should visit the veterinarian at six to eight weeks of age for a health exam and to begin vaccinations and parasite preventives.
+- The distemper/hepatitis/parvovirus combination is given three times, spaced about three to four weeks apart, finishing at or after 16 weeks of age.
+- Rabies is often given at 12 to 16 weeks of age.
 
-## House training
-- Take puppies out first thing in the morning, after meals, after naps, after play and before bed. Young puppies may need to go out every 1-2 hours.
-- Reward right away when they go in the right spot.
+## Socialization (AKC)
+- During a puppy's first three months of life, it experiences a socialization period.
+- A puppy can go to the dog park seven to ten days after its full series of puppy vaccinations.
 
-## Exercise
-- Puppies need short, frequent play and walks rather than long, hard exercise. A commonly cited rule of thumb is about 5 minutes of structured exercise per month of age, up to twice a day, but it is only a guide.
-- Avoid repetitive high-impact activity (long runs, jumping) until growth plates close, especially in large breeds.
+## Feeding (VCA)
+- Feeding three to four meals a day can be helpful for puppies.
+- Free-choice feeding (all the puppy can eat at once) is not recommended, because it can create juvenile obesity and encourage binge-eating.
 
-## Training and socialization
-- The key socialization window is roughly 3-14 weeks old. Expose puppies safely to new people, sounds, surfaces and other vaccinated dogs.
-- Keep training sessions short (5-10 minutes) and positive.
-
-## Vet care
-- Puppies need a vaccination series every 2-4 weeks from about 6-8 weeks until around 16 weeks, plus deworming and parasite prevention. Talk to your vet about spay/neuter timing.
+## Exercise (AKC)
+- How much exercise a puppy needs depends on its age and breed.
+- Don't overdo workouts, because a puppy's bones are still growing.
+- Several short walks or play sessions through the day are safer than one long walk.
 
 ## Suggested tasks
+These are suggested defaults, not statements from the sources.
 - Puppy meals, 10 minutes each, three to four times daily, high priority.
-- Potty breaks, 10 minutes, several times daily, high priority.
-- Short training session, 10 minutes, daily, medium priority.
+- Short play or training session, 10 minutes, daily, medium priority.
 - Vet vaccination visit, 45 minutes, high priority.

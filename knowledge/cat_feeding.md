@@ -1,28 +1,25 @@
 ---
 title: Cat Feeding and Water
 species: cat
-tags: [feeding, meals, water, weight, wet food]
-source: Cornell Feline Health Center / American Association of Feline Practitioners
-source_url: https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center
+tags: [feeding, meals, water, weight, wet food, kitten]
+source: Cornell Feline Health Center, "Feeding Your Cat"
+source_url: https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feeding-your-cat
+verified: yes (read 2026-11-15)
 ---
 
 # Cat Feeding and Water
 
 ## Meals
-- Adult cats are commonly fed two measured meals a day, or several small meals. Free-feeding dry food can lead to overeating and obesity in some cats.
-- Kittens need 3-4 meals a day of kitten food, which has higher calories and nutrients for growth.
-- Cats are obligate carnivores. Choose a complete and balanced cat food (look for an AAFCO statement on the label).
+- Adult cats (about 1 year and older) do well on one or two meals a day in most cases.
+- Kittens up to six months old usually do best with three meals a day, then twice daily from 6 to 12 months.
+- Cats are obligate carnivores. Choose a complete and balanced cat food.
 
 ## Wet vs. dry
-- Wet food adds water to the diet, which supports urinary and kidney health. Many vets recommend including some wet food.
-
-## Portions and weight
-- Follow label guidelines, then adjust to your cat's body condition. Ask your vet for a target weight.
-- Sudden weight loss, loss of appetite or increased thirst warrants a vet visit.
+- Canned food has a moisture content of at least 75 percent, which makes it a good dietary source of water.
 
 ## Water
-- Provide fresh water at all times, and wash bowls daily. Some cats prefer a fountain or wide, shallow bowls.
-- Place water away from the food and the litter box.
+- Cats should have access to clean, fresh water at all times.
+- Keep food away from the litter box. A nearby litter box can deter a cat from eating, and cats prefer to eat and eliminate in separate areas.
 
 ## Suggested tasks
 - Breakfast feeding, 10 minutes, daily, high priority.

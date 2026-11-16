@@ -2,34 +2,31 @@
 title: Senior Pet Care
 species: any
 life_stage: senior
-tags: [senior, aging, arthritis, vet, weight, mobility]
-source: American Animal Hospital Association senior care guidelines / Cornell Feline Health Center
-source_url: https://www.aaha.org
+tags: [senior, aging, vet, wellness exam, bloodwork, geriatric]
+source: VCA Animal Hospitals, "When is Your Dog or Cat Considered a Senior?"
+source_url: https://vcahospitals.com/resources/senior/when-is-your-pet-considered-a-senior
+source_url_2: https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/loving-care-older-cats
+source_url_3: https://vcahospitals.com/know-your-pet/wellness-examination-in-dogs
+source_url_4: https://vcahospitals.com/know-your-pet/wellness-examination-in-cats
+verified: yes for the ages and exam frequencies below (pages read 2026-11-15; AAHA's own senior guidelines could not be read because the site blocks automated access)
 ---
 
 # Senior Pet Care
 
-## When is a pet a senior?
-- Cats are generally considered seniors around age 10 and older (mature from about 7).
-- Dogs are generally seniors from about age 7, but large and giant breeds can be considered senior as early as 5-6. Small breeds often reach senior status closer to 10.
+## When is a pet a senior? (VCA)
+Senior age depends on size for dogs:
+- Small dogs (20 lbs or less): about 9 to 11 years.
+- Medium dogs (21-50 lbs): about 7 to 9 years.
+- Large dogs (51-100 lbs): about 6 to 7 years.
+- Giant dogs (100+ lbs): about 4 to 5 years.
+- Cats, all sizes: about 9 to 11 years by VCA's senior table. VCA's cat wellness page says cats are seniors between 11 and 14 and geriatric over 15. Cornell calls cats "older" at 12 to 14 years.
 
 ## Vet care
-- Senior pets should usually have a wellness exam every 6 months, often with bloodwork, urine tests and blood pressure checks.
-- Early detection of kidney disease, thyroid problems, diabetes, arthritis and dental disease greatly improves outcomes.
-
-## Exercise
-- Keep exercising, but switch to shorter, gentler, more frequent activity, such as several short walks instead of one long one.
-- Avoid hard jumping or slippery floors. Ramps, rugs and orthopedic beds can help arthritic pets.
-
-## Nutrition and weight
-- Keep seniors lean, as extra weight worsens joint pain. Some seniors need a diet formulated for their age or a health condition; ask your vet.
-- Watch for weight loss, appetite changes, increased thirst or urination.
-
-## Watch for changes
-- Stiffness, trouble climbing stairs, confusion, house-soiling accidents, vocalizing at night, bad breath or lumps all deserve a vet visit rather than being dismissed as "just old age."
+- VCA advises visiting the veterinarian every six months, instead of once a year, for routine wellness appointments.
+- VCA: for middle-aged, senior and geriatric dogs and cats, twice-yearly examinations are recommended.
+- Cornell: for healthy older cats, a yearly geriatric exam, including blood work and X-rays, along with a smaller exam in between, is ideal. Cornell also quotes a veterinarian saying six-month checkups for geriatric cats are great.
 
 ## Suggested tasks
-- Short gentle walk, 15-20 minutes, twice daily (dogs), medium priority.
+These are suggested defaults, not statements from the sources.
 - Senior wellness exam, 60 minutes, every 6 months, high priority.
 - Weigh pet and note changes, 5 minutes, monthly, low priority.
-- Joint supplement or prescribed medication, 5 minutes, daily, high priority (only as directed by a vet).

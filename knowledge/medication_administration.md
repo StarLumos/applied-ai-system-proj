@@ -1,31 +1,33 @@
 ---
 title: Giving Pets Medication Safely
 species: any
-tags: [medication, meds, pills, dosing, vet, schedule]
-source: American Veterinary Medical Association
-source_url: https://www.avma.org
+tags: [medication, meds, pills, dosing, vet, safety, human medications]
+source: FDA, "Medication Errors Happen to Pets, Too"
+source_url: https://www.fda.gov/consumers/consumer-updates/medication-errors-happen-pets-too
+source_url_2: https://www.fda.gov/animal-veterinary/animal-health-literacy/get-facts-about-pain-relievers-pets
+source_url_3: https://www.avma.org/resources-tools/pet-owners/petcare/household-hazards
+source_url_4: https://vcahospitals.com/resources/conditions-cat/medications/tips-and-tricks-to-give-your-pet-a-pill
+verified: yes (FDA, AVMA and VCA pill-tips pages read in full 2026-11-15)
 ---
 
 # Giving Pets Medication Safely
 
-## Basics
-- Give medication exactly as prescribed: the right dose, at the right time, for the full length of the course, even if the pet seems better.
-- Never give human medications (such as ibuprofen, acetaminophen or naproxen) to pets unless a vet directs it. Many are toxic, and cats are especially sensitive.
-- Do not split, crush or mix medication into food unless the vet or pharmacist says it is safe, since some medications lose effect or taste bitter.
+## Dosing and storage (FDA)
+- Dosing mistakes happen. Unclear abbreviations are a common cause: "SID" (once daily) has been misread as "BID" or "QID", leading to overdoses. Ask your vet to explain anything unclear, including how much to give each time.
+- Keep animal drugs stored away from human drug products, in their original labeled containers.
+- Do not share the medication for one animal with another unless directed by the veterinarian.
 
-## Timing
-- Pick fixed times that fit your routine (for example with breakfast and dinner). Consistent timing helps both the pet and the owner remember.
-- If a dose is missed, ask the vet what to do. Do not double the next dose unless told to.
-- Medications that must be given with food or on an empty stomach should be scheduled around meals.
+## Human medications
+- Don't give human medications to your pet unless your vet directs it.
+- The AVMA says medications used to treat human conditions are among the top causes of reported pet poisonings in the U.S. Its harmful list includes acetaminophen, ibuprofen, naproxen and antidepressants.
+- The FDA says acetaminophen is fatal to cats, and NSAIDs meant for people may not be safe in dogs. They can cause ulcers and kidney or liver failure. Before reaching for any bottle, call your veterinarian.
 
-## Making it easier
-- Pill pockets, a small amount of wet food or cheese (if the pet is not allergic and the vet says it is fine) can hide pills. Follow with a treat as a reward.
-- For liquids, aim into the cheek pouch slowly rather than the back of the throat.
+## Leftovers (VCA)
+- Never use leftover medicine without your veterinarian's approval.
 
-## Safety
-- Store medication out of reach and in its original container.
-- Keep a note of what was given and when, especially with multiple pets or caretakers.
-- Call the vet if the pet vomits right after a dose or shows side effects.
+## Making it easier (VCA)
+- The easiest way to give a pill is to hide it in food, for example in a soft treat such as a Pill Pocket. Watch your pet during and shortly after eating it to make sure they don't spit the pill out.
 
 ## Suggested tasks
-- Give medication, 5-10 minutes, daily (or as prescribed), high priority. Schedule it with a meal and set it to repeat daily.
+These are suggested defaults, not statements from the sources.
+- Give medication, 5-10 minutes, as prescribed, high priority.
