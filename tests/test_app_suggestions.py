@@ -7,7 +7,7 @@ from streamlit.testing.v1 import AppTest
 
 import suggestions
 from pawpal_system import Owner, Pet, Priority, Recurrence, Species
-from suggestions import Suggestion, SuggestionError
+from suggestions import NotConfiguredError, Suggestion, SuggestionError
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
 
@@ -146,8 +146,19 @@ def test_api_failure_falls_back_to_guide_suggestions_with_a_notice(stub, added):
     assert added == []  # still nothing added without a click
 
 
+def test_no_api_key_shows_guide_suggestions_without_any_warning(stub, added):
+    stub(NotConfiguredError("No API credentials found. Set the ANTHROPIC_API_KEY environment variable."))
+    at, _, _ = make_app()
+    at.run()
+    at = click(at, "Suggest care tasks")
+    assert not at.exception
+    assert not at.warning and not at.error  # no "unavailable" notice on a machine without a key
+    assert any("Morning walk" in m for m in texts(at.markdown))
+    assert any("Dog Exercise Needs" in c for c in texts(at.caption))
+
+
 def test_fallback_suggestions_can_be_added(stub, added):
-    stub(SuggestionError("No API credentials found. Set the ANTHROPIC_API_KEY environment variable."))
+    stub(NotConfiguredError("No API credentials found."))
     at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")

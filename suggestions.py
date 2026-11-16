@@ -77,6 +77,14 @@ class SuggestionError(Exception):
     """The suggestions could not be generated. The message is safe to show to a user."""
 
 
+class NotConfiguredError(SuggestionError):
+    """AI mode isn't set up (no API credentials, or the SDK isn't installed).
+
+    Expected on a machine without a key, so callers can fall back quietly instead of
+    reporting a failure.
+    """
+
+
 @dataclass
 class Suggestion:
     description: str
@@ -189,11 +197,11 @@ def generate_suggestions(
         try:
             import anthropic
         except ImportError as exc:
-            raise SuggestionError("The 'anthropic' package is not installed.") from exc
+            raise NotConfiguredError("The 'anthropic' package is not installed.") from exc
         try:
             client = anthropic.Anthropic()
         except Exception as exc:  # e.g. no credentials configured
-            raise SuggestionError(
+            raise NotConfiguredError(
                 "No API credentials found. Set the ANTHROPIC_API_KEY environment variable."
             ) from exc
         api_errors: tuple = (anthropic.APIError,)
@@ -211,7 +219,7 @@ def generate_suggestions(
     except TypeError as exc:
         # The SDK raises TypeError at request time when no credentials are configured.
         if "authentication" in str(exc).lower():
-            raise SuggestionError(
+            raise NotConfiguredError(
                 "No API credentials found. Set the ANTHROPIC_API_KEY environment variable."
             ) from exc
         raise

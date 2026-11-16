@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task, Scheduler
 from suggestions import (
+    NotConfiguredError,
     SuggestionError,
     default_start_times,
     suggest_for_pet,
@@ -140,8 +141,11 @@ if owner.pets:
         with st.spinner("Reading the care guides..."):
             try:
                 found = suggest_for_pet(suggest_pet)
+            except NotConfiguredError:
+                # No API key: expected, so use the guides' own task lists without any warning.
+                found = suggest_from_guides(suggest_pet)
             except SuggestionError as exc:
-                # No key, no network, a refusal or a bad reply: fall back to the guides' own task lists.
+                # AI mode is set up but failed (network, refusal, bad reply): fall back and say so.
                 found = suggest_from_guides(suggest_pet)
                 notice = (f"AI suggestions are unavailable ({exc}) Showing the standard tasks from the "
                           "matching care guides instead. They aren't tailored to this pet.")

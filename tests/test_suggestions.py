@@ -8,6 +8,7 @@ from pawpal_system import Pet, Priority, Recurrence, Species, Task
 from rag import Retriever, retrieve_for_pet
 from suggestions import (
     MAX_SUGGESTIONS,
+    NotConfiguredError,
     SuggestionError,
     build_user_prompt,
     generate_suggestions,
@@ -178,7 +179,7 @@ def test_missing_credentials_raise_a_clear_error(dog_hits, monkeypatch):
 
     fake = SimpleNamespace(messages=SimpleNamespace(create=no_credentials))
     monkeypatch.setattr(anthropic, "Anthropic", lambda: fake)  # no network access possible
-    with pytest.raises(SuggestionError, match="ANTHROPIC_API_KEY"):
+    with pytest.raises(NotConfiguredError, match="ANTHROPIC_API_KEY"):
         generate_suggestions(make_pet(), dog_hits)
 
 
