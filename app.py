@@ -1,10 +1,16 @@
+import logging
 import streamlit as st
 
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Generator
 
+from logging_config import setup_logging
 from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task, Scheduler
 from suggestions import default_start_times, suggest_from_guides, suggestion_to_task
+
+setup_logging()
+logger = logging.getLogger("pawpal.app")
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -62,6 +68,21 @@ def choose(label: str, items: list[Any], format_func: Callable[[Any], str], **kw
     return by_id[picked]
 
 
+@contextmanager
+def safe_action(what: str) -> Generator[None, None, None]:
+    """Run one user action; on an unexpected error, log it and show a friendly message.
+
+    The traceback goes to the log, not the page, so the user sees a short message and the
+    rest of the page still renders. Streamlit's own control-flow exceptions are not
+    ``Exception`` subclasses, so they pass through untouched.
+    """
+    try:
+        yield
+    except Exception:
+        logger.exception("Failed to %s", what)
+        st.error(f"Couldn't {what}. The problem was logged; please try again.")
+
+
 owner.name = st.text_input("Owner name", value=owner.name)
 
 st.subheader("Add a Pet")
@@ -77,10 +98,14 @@ with st.form("add_pet_form", clear_on_submit=True):
         pet_breed = st.text_input("Breed")
     if st.form_submit_button("Add pet"):
         if pet_name.strip():
-            owner.add_pet(
-                Pet(name=pet_name.strip(), age=int(pet_age), breed=pet_breed.strip(), species=pet_species)
-            )
+            with safe_action("add the pet"):
+                owner.add_pet(
+                    Pet(name=pet_name.strip(), age=int(pet_age), breed=pet_breed.strip(), species=pet_species)
+                )
+                logger.info("Pet added: species=%s age=%d (now %d pet(s))",
+                            pet_species.value, int(pet_age), len(owner.pets))
         else:
+            logger.info("Add pet rejected: name is required")
             st.error("Pet name is required.")
 
 if owner.pets:
@@ -116,18 +141,21 @@ if owner.pets:
                 "Repeats", list(Recurrence), format_func=lambda r: r.value.title()
             )
         if st.form_submit_button("Add task"):
-            new_task = Task(
-                description=description,
-                start_time=datetime.combine(task_date, task_time),
-                duration=int(duration),
-                priority=priority,
-                recurrence=recurrence,
-            )
-            pet_choice.add_task(new_task)
-            st.success(f"Added '{description}' for {pet_choice.name}.")
-            warning = Scheduler(owner).check_conflict(new_task)
-            if warning:
-                st.warning(f"Heads up: {warning}")
+            with safe_action("add the task"):
+                new_task = Task(
+                    description=description,
+                    start_time=datetime.combine(task_date, task_time),
+                    duration=int(duration),
+                    priority=priority,
+                    recurrence=recurrence,
+                )
+                pet_choice.add_task(new_task)
+                st.success(f"Added '{description}' for {pet_choice.name}.")
+                warning = Scheduler(owner).check_conflict(new_task)
+                logger.info("Task added via form: duration=%d priority=%s repeats=%s conflict=%s",
+                            new_task.duration, priority.name, recurrence.value, bool(warning))
+                if warning:
+                    st.warning(f"Heads up: {warning}")
 else:
     st.info("Add a pet before scheduling tasks.")
 
@@ -144,8 +172,9 @@ if owner.pets:
                    "Add the pet with a species for better matches.")
 
     if st.button("Suggest care tasks"):
-        st.session_state.setdefault("suggestions", {})[suggest_pet.id] = {
-            "items": suggest_from_guides(suggest_pet), "added": set()}
+        with safe_action("load care suggestions"):
+            st.session_state.setdefault("suggestions", {})[suggest_pet.id] = {
+                "items": suggest_from_guides(suggest_pet), "added": set()}
 
     state = st.session_state.get("suggestions", {}).get(suggest_pet.id)
     if state is not None and not state["items"]:
@@ -173,13 +202,17 @@ if owner.pets:
                     st.write("")
                     add_clicked = st.button("Add to schedule", key=f"suggest_add_{suggest_pet.id}_{i}")
                 if add_clicked:
-                    new_task = suggestion_to_task(suggestion, datetime.combine(suggest_day, start_clock))
-                    suggest_pet.add_task(new_task)
-                    state["added"].add(i)
-                    st.success(f"Added '{new_task.description}' for {suggest_pet.name}.")
-                    conflict = Scheduler(owner).check_conflict(new_task)
-                    if conflict:
-                        st.warning(f"Heads up: {conflict}")
+                    with safe_action("add the suggested task"):
+                        new_task = suggestion_to_task(suggestion, datetime.combine(suggest_day, start_clock))
+                        suggest_pet.add_task(new_task)
+                        state["added"].add(i)
+                        st.success(f"Added '{new_task.description}' for {suggest_pet.name}.")
+                        conflict = Scheduler(owner).check_conflict(new_task)
+                        logger.info("Suggested task added: source=%s priority=%s repeats=%s conflict=%s",
+                                    suggestion.source_id, suggestion.priority.name,
+                                    suggestion.recurrence.value, bool(conflict))
+                        if conflict:
+                            st.warning(f"Heads up: {conflict}")
 else:
     st.info("Add a pet to get care suggestions.")
 
@@ -268,14 +301,17 @@ if all_tasks:
                 lambda t: f"{t.start_time:%b %d %H:%M} - {t.description} ({t.pet.name if t.pet else '-'})",
             )
             if st.form_submit_button("Mark complete"):
-                next_task = to_complete.mark_complete()
-                if next_task:
-                    st.success(
-                        f"Completed '{to_complete.description}'. "
-                        f"Next {to_complete.recurrence.value} occurrence scheduled for {next_task.start_time:%b %d at %H:%M}."
-                    )
-                else:
-                    st.success(f"Completed '{to_complete.description}'.")
+                with safe_action("mark the task complete"):
+                    next_task = to_complete.mark_complete()
+                    logger.info("Task marked complete: repeats=%s next_created=%s",
+                                to_complete.recurrence.value, next_task is not None)
+                    if next_task:
+                        st.success(
+                            f"Completed '{to_complete.description}'. "
+                            f"Next {to_complete.recurrence.value} occurrence scheduled for {next_task.start_time:%b %d at %H:%M}."
+                        )
+                    else:
+                        st.success(f"Completed '{to_complete.description}'.")
 else:
     st.info("No tasks yet. Schedule one above.")
 
@@ -288,18 +324,21 @@ st.caption(
 )
 
 if st.button("Generate schedule"):
-    schedule = scheduler.build_schedule()
-    if schedule:
-        total_minutes = sum(t.duration for t in schedule)
-        st.success(f"Scheduled {len(schedule)} task(s) totalling {total_minutes} minutes.")
-        st.table(task_rows(schedule))
-    else:
-        st.info("No pending tasks to schedule.")
+    with safe_action("generate the schedule"):
+        schedule = scheduler.build_schedule()
+        if schedule:
+            total_minutes = sum(t.duration for t in schedule)
+            st.success(f"Scheduled {len(schedule)} task(s) totalling {total_minutes} minutes.")
+            st.table(task_rows(schedule))
+        else:
+            st.info("No pending tasks to schedule.")
 
-    skipped = [t for t in scheduler.filter_tasks(completed=False) if t not in schedule]
-    if skipped:
-        st.warning(
-            "Outside your available hours, so not scheduled: "
-            + ", ".join(f"'{t.description}'" for t in scheduler.sort_by_time(skipped))
-        )
-    show_conflicts(schedule, "No conflicts. Your schedule is clear.")
+        skipped = [t for t in scheduler.filter_tasks(completed=False) if t not in schedule]
+        if skipped:
+            st.warning(
+                "Outside your available hours, so not scheduled: "
+                + ", ".join(f"'{t.description}'" for t in scheduler.sort_by_time(skipped))
+            )
+        show_conflicts(schedule, "No conflicts. Your schedule is clear.")
+        logger.info("Schedule generated: %d scheduled, %d outside available hours",
+                    len(schedule), len(skipped))

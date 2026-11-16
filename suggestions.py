@@ -13,6 +13,7 @@ for this app, not statements made by the cited sources.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -23,6 +24,8 @@ from rag import Retriever, life_stage_for, retrieve_for_pet
 
 if TYPE_CHECKING:
     from pawpal_system import Pet
+
+logger = logging.getLogger("pawpal.suggestions")
 
 MAX_SUGGESTIONS = 20  # above what a pet's ~7 guides list in all (about 18 tasks)
 MIN_DURATION, MAX_DURATION = 1, 240  # same bounds as the "Schedule a Task" form
@@ -148,20 +151,40 @@ def suggest_from_guides(pet: "Pet", retriever: Optional[Retriever] = None) -> Li
     """
     taken = {t.description.strip().lower() for t in pet.list_tasks()}
     stage = life_stage_for(pet)
+    hits = retrieve_for_pet(pet, retriever=retriever)
     out: List[Suggestion] = []
-    for hit in retrieve_for_pet(pet, retriever=retriever):
-        for line in _task_lines(hit.chunk.text):
+    for hit in hits:
+        lines = _task_lines(hit.chunk.text)
+        if not lines:
+            logger.warning("Guide %s has no 'Suggested tasks' list; nothing to suggest from it",
+                           hit.chunk.id)
+        for line in lines:
             s = _parse_task_line(line, hit.chunk)
-            if (
-                s is None
-                or not MIN_DURATION <= s.duration_minutes <= MAX_DURATION
-                or len(s.description) > MAX_DESCRIPTION_LEN
-                or s.description.lower() in taken
-                or not _fits_stage(s.description, stage)
-            ):
+            if s is None:
+                logger.warning("Unparseable suggested task in guide %s: %r", hit.chunk.id, line)
+                continue
+            reason = _skip_reason(s, taken, stage)
+            if reason:
+                logger.debug("Skipped %r from %s: %s", s.description, hit.chunk.id, reason)
                 continue
             taken.add(s.description.lower())
             out.append(s)
             if len(out) == MAX_SUGGESTIONS:
+                logger.warning("Suggestion limit (%d) reached; remaining tasks dropped", MAX_SUGGESTIONS)
                 return out
+    logger.info("Suggested %d task(s) for species=%s life_stage=%s from %d guide(s)",
+                len(out), pet.species.value, stage, len(hits))
     return out
+
+
+def _skip_reason(s: Suggestion, taken: set, stage: Optional[str]) -> Optional[str]:
+    """Why a parsed suggestion should be left out, or None to keep it."""
+    if not MIN_DURATION <= s.duration_minutes <= MAX_DURATION:
+        return f"duration {s.duration_minutes} outside {MIN_DURATION}-{MAX_DURATION} minutes"
+    if len(s.description) > MAX_DESCRIPTION_LEN:
+        return "description too long"
+    if s.description.lower() in taken:
+        return "the pet already has it, or it was already suggested"
+    if not _fits_stage(s.description, stage):
+        return f"names a different life stage than {stage!r}"
+    return None

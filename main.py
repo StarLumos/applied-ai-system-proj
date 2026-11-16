@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from logging_config import setup_logging
 from pawpal_system import Owner, Pet, Priority, Recurrence, Scheduler, Species, Task
 
 
@@ -13,6 +14,7 @@ def pet_name(task: Task) -> str:
 
 
 def main() -> None:
+    setup_logging()
     owner = Owner(name="Chelsea", contact="chelsea@example.com",
                   available_start=6, available_end=22)
 

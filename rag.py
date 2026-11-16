@@ -6,6 +6,7 @@ Each file in ``knowledge/`` becomes one :class:`Chunk`, so a citation is just th
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 from collections import Counter
@@ -18,7 +19,10 @@ from pawpal_system import Species
 if TYPE_CHECKING:
     from pawpal_system import Pet
 
+logger = logging.getLogger("pawpal.rag")
+
 KNOWLEDGE_DIR = Path(__file__).parent / "knowledge"
+VALID_SPECIES = frozenset({"dog", "cat", "any"})
 
 _STOPWORDS = frozenset(
     "a an and are as at be but by for from has have how if in into is it its of on or "
@@ -92,29 +96,59 @@ def _parse_list(value: str) -> List[str]:
 
 
 def load_chunks(directory: Path = KNOWLEDGE_DIR) -> List[Chunk]:
-    """Load every ``*.md`` file in ``directory`` (except the README) as a Chunk."""
+    """Load every ``*.md`` file in ``directory`` (except the README) as a Chunk.
+
+    Never raises for bad input: a missing folder gives an empty list, and a guide that
+    can't be read or has no content is skipped. Each problem is logged, so one broken
+    file can't take the whole knowledge base down.
+    """
+    directory = Path(directory)
+    if not directory.is_dir():
+        logger.error("Knowledge directory not found: %s", directory)
+        return []
+
     chunks = []
-    for path in sorted(Path(directory).glob("*.md")):
+    for path in sorted(directory.glob("*.md")):
         if path.name.lower() == "readme.md":
             continue
-        meta, body = _parse_frontmatter(path.read_text(encoding="utf-8"))
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            logger.warning("Skipping unreadable guide %s: %s", path.name, exc)
+            continue
+        meta, body = _parse_frontmatter(raw)
+        if not body.strip():
+            logger.warning("Skipping empty guide %s", path.name)
+            continue
+        if "title" not in meta:
+            logger.warning("Guide %s has no title; using its file name", path.name)
+        species = meta.get("species", "any").lower()
+        if species not in VALID_SPECIES:
+            logger.warning("Guide %s has unknown species %r; it will match no pet species",
+                           path.name, species)
         urls = [
             meta[key]
             for key in sorted(k for k in meta if k.startswith("source_url"))
             if meta[key]
         ]
+        if not urls:
+            logger.warning("Guide %s has no source_url, so its suggestions can't be cited", path.name)
         chunks.append(
             Chunk(
                 id=path.stem,
                 title=meta.get("title", path.stem.replace("_", " ").title()),
                 text=body,
-                species=meta.get("species", "any").lower(),
+                species=species,
                 life_stage=meta.get("life_stage", "").lower() or None,
                 tags=_parse_list(meta.get("tags", "")),
                 source=meta.get("source", ""),
                 source_urls=urls,
             )
         )
+    if chunks:
+        logger.info("Loaded %d guide(s) from %s", len(chunks), directory)
+    else:
+        logger.warning("No guides loaded from %s; retrieval will return nothing", directory)
     return chunks
 
 
@@ -187,6 +221,7 @@ class Retriever:
         """
         tokens = tokenize(query)
         if not tokens or k <= 0:
+            logger.debug("Empty query or k<=0 (query=%r, k=%s); returning no hits", query, k)
             return []
         hits = []
         for i, chunk in enumerate(self.chunks):
@@ -196,6 +231,8 @@ class Retriever:
             if score > 0:
                 hits.append(Hit(chunk, score))
         hits.sort(key=lambda h: (-h.score, h.chunk.id))
+        logger.debug("query=%r species=%s life_stage=%s -> %s", query, species, life_stage,
+                     [(h.chunk.id, round(h.score, 2)) for h in hits[:k]])
         return hits[:k]
 
 
@@ -264,6 +301,9 @@ def retrieve_for_pet(pet: "Pet", retriever: Optional[Retriever] = None, per_topi
     retriever = retriever or Retriever()
     species = pet.species.value
     stage = life_stage_for(pet)
+    if not retriever.chunks:
+        logger.warning("Retrieval skipped: the knowledge base is empty")
+        return []
 
     queries = list(TOPIC_QUERIES.values())
     if stage and stage != "adult":
@@ -277,4 +317,6 @@ def retrieve_for_pet(pet: "Pet", retriever: Optional[Retriever] = None, per_topi
         fresh = [h for h in candidates if h.chunk.id not in seen][:per_topic]
         seen.update(h.chunk.id for h in fresh)
         results.extend(fresh)
+    logger.info("Retrieved %d guide(s) for species=%s life_stage=%s: %s",
+                len(results), species, stage, [h.chunk.id for h in results])
     return results
