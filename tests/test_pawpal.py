@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from pawpal_system import Owner, Pet, Priority, Recurrence, Scheduler, Task
+from pawpal_system import Owner, Pet, Priority, Recurrence, Scheduler, Species, Task
 
 
 def make_task() -> Task:
@@ -343,3 +343,9 @@ def test_zero_duration_task_at_another_tasks_start_is_flagged_inconsistently():
     assert len(scheduler.conflict_warnings()) == 1
     assert walk.overlaps(instant) is False
     assert scheduler.check_conflict(instant) is None
+
+
+def test_pet_species_defaults_to_any_and_can_be_set():
+    assert Pet(name="Mochi", age=3, breed="Shiba Inu").species is Species.ANY
+    assert Pet(name="Luna", age=2, breed="Tabby", species=Species.CAT).species is Species.CAT
+    assert Pet("Mochi", 3, "Shiba", Species.DOG).species is Species.DOG

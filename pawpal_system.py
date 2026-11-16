@@ -13,6 +13,12 @@ class Priority(IntEnum):
     HIGH = 3
 
 
+class Species(Enum):
+    DOG = "dog"
+    CAT = "cat"
+    ANY = "any"
+
+
 class Recurrence(Enum):
     NONE = "none"
     DAILY = "daily"
@@ -83,6 +89,7 @@ class Pet:
     name: str
     age: int
     breed: str
+    species: Species = Species.ANY
     owner: Optional[Owner] = field(default=None, repr=False)
     tasks: List[Task] = field(default_factory=list)
     id: str = field(default_factory=lambda: uuid.uuid4().hex)

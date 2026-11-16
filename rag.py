@@ -11,7 +11,12 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+from pawpal_system import Species
+
+if TYPE_CHECKING:
+    from pawpal_system import Pet
 
 KNOWLEDGE_DIR = Path(__file__).parent / "knowledge"
 
@@ -159,7 +164,7 @@ class Retriever:
         species: Optional[str],
         life_stage: Optional[str],
     ) -> bool:
-        if species and chunk.species not in ("any", species.lower()):
+        if species and species.lower() != "any" and chunk.species not in ("any", species.lower()):
             return False
         if life_stage and chunk.life_stage and chunk.life_stage != life_stage.lower():
             return False
@@ -174,7 +179,8 @@ class Retriever:
     ) -> List[Hit]:
         """Return up to ``k`` chunks with a positive score, best first.
 
-        ``species`` keeps that species plus species-neutral chunks. ``life_stage``
+        ``species`` keeps that species plus species-neutral chunks (``"any"`` or
+        ``None`` applies no species filter). ``life_stage``
         only drops chunks written for a *different* stage; chunks with no stage
         stay eligible.
         """
@@ -190,3 +196,56 @@ class Retriever:
                 hits.append(Hit(chunk, score))
         hits.sort(key=lambda h: (-h.score, h.chunk.id))
         return hits[:k]
+
+
+# ---------- pet profile -> query ----------
+
+# Age is whole years, and the knowledge base has no size information, so these are
+# simplified cut-offs. They sit inside the ranges in the VCA senior-pet guide
+# (dogs about 4-11 depending on size, cats about 9-11).
+SENIOR_AGE = {Species.DOG: 7, Species.CAT: 9}
+DEFAULT_SENIOR_AGE = 8
+
+
+def life_stage_for(pet: "Pet") -> Optional[str]:
+    """Map a pet's species and age to a stage: puppy/kitten (under 1), adult, or senior.
+
+    Returns None for a pet under 1 of unknown species, since "puppy" or "kitten"
+    would be a guess; the retriever then skips life-stage filtering.
+    """
+    if pet.age < 1:
+        return {Species.DOG: "puppy", Species.CAT: "kitten"}.get(pet.species)
+    if pet.age >= SENIOR_AGE.get(pet.species, DEFAULT_SENIOR_AGE):
+        return "senior"
+    return "adult"
+
+
+def build_query(pet: "Pet") -> str:
+    """Turn a pet's profile into a retrieval query.
+
+    Uses species, breed, life stage and the descriptions of tasks the pet already
+    has. Age is not included as a number, because stray digits match unrelated
+    guides; the life stage carries that information instead.
+    """
+    parts = []
+    if pet.species is not Species.ANY:
+        parts.append(pet.species.value)
+    if pet.breed:
+        parts.append(pet.breed)
+    stage = life_stage_for(pet)
+    if stage and stage != "adult":
+        parts.append(stage)
+    parts.append("care")
+    parts.extend(t.description for t in pet.list_tasks())
+    return " ".join(parts)
+
+
+def retrieve_for_pet(pet: "Pet", retriever: Optional[Retriever] = None, k: int = 5) -> List[Hit]:
+    """Retrieve the guides most relevant to one pet, filtered by its species and life stage."""
+    retriever = retriever or Retriever()
+    return retriever.retrieve(
+        build_query(pet),
+        k=k,
+        species=pet.species.value,
+        life_stage=life_stage_for(pet),
+    )

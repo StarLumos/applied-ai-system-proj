@@ -2,7 +2,7 @@ import streamlit as st
 
 from datetime import datetime
 
-from pawpal_system import Owner, Pet, Priority, Recurrence, Task, Scheduler
+from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task, Scheduler
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -51,22 +51,30 @@ owner.name = st.text_input("Owner name", value=owner.name)
 
 st.subheader("Add a Pet")
 with st.form("add_pet_form", clear_on_submit=True):
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         pet_name = st.text_input("Pet name")
     with col2:
-        pet_age = st.number_input("Age", min_value=0, max_value=40, value=1)
+        pet_species = st.selectbox("Species", list(Species), format_func=lambda s: s.value.title())
     with col3:
+        pet_age = st.number_input("Age", min_value=0, max_value=40, value=1)
+    with col4:
         pet_breed = st.text_input("Breed")
     if st.form_submit_button("Add pet"):
         if pet_name.strip():
-            owner.add_pet(Pet(name=pet_name.strip(), age=int(pet_age), breed=pet_breed.strip()))
+            owner.add_pet(
+                Pet(name=pet_name.strip(), age=int(pet_age), breed=pet_breed.strip(), species=pet_species)
+            )
         else:
             st.error("Pet name is required.")
 
 if owner.pets:
     st.table(
-        [{"name": p.name, "age": p.age, "breed": p.breed, "tasks": len(p.tasks)} for p in owner.list_pets()]
+        [
+            {"name": p.name, "species": p.species.value.title(), "age": p.age, "breed": p.breed,
+             "tasks": len(p.tasks)}
+            for p in owner.list_pets()
+        ]
     )
 else:
     st.info("No pets yet. Add one above.")

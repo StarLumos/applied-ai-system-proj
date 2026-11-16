@@ -105,3 +105,73 @@ def test_title_and_tags_outweigh_a_passing_body_mention():
 
 def test_empty_corpus_is_safe():
     assert Retriever([]).retrieve("anything") == []
+
+
+# ---------- pet profile -> query ----------
+
+from datetime import datetime  # noqa: E402
+
+from pawpal_system import Pet, Species, Task  # noqa: E402
+from rag import build_query, life_stage_for, retrieve_for_pet  # noqa: E402
+
+
+def make_pet(age=3, species=Species.DOG, breed="Beagle", name="Rex"):
+    return Pet(name=name, age=age, breed=breed, species=species)
+
+
+def test_life_stage_by_species_and_age():
+    assert life_stage_for(make_pet(age=0)) == "puppy"
+    assert life_stage_for(make_pet(age=0, species=Species.CAT)) == "kitten"
+    assert life_stage_for(make_pet(age=3)) == "adult"
+    assert life_stage_for(make_pet(age=6)) == "adult"
+    assert life_stage_for(make_pet(age=7)) == "senior"
+    assert life_stage_for(make_pet(age=8, species=Species.CAT)) == "adult"
+    assert life_stage_for(make_pet(age=9, species=Species.CAT)) == "senior"
+
+
+def test_life_stage_for_unknown_species():
+    assert life_stage_for(make_pet(age=0, species=Species.ANY)) is None
+    assert life_stage_for(make_pet(age=3, species=Species.ANY)) == "adult"
+    assert life_stage_for(make_pet(age=8, species=Species.ANY)) == "senior"
+
+
+def test_build_query_includes_profile_but_not_the_age_number():
+    query = build_query(make_pet(age=10, breed="Beagle"))
+    assert "dog" in query and "Beagle" in query and "senior" in query
+    assert "10" not in query
+
+
+def test_build_query_includes_existing_task_descriptions():
+    pet = make_pet()
+    pet.add_task(Task("Morning walk", datetime(2026, 1, 1, 8, 0), 30))
+    assert "Morning walk" in build_query(pet)
+
+
+def test_build_query_for_any_species_omits_species_word():
+    query = build_query(make_pet(species=Species.ANY, breed=""))
+    assert query == "care"
+
+
+def test_species_any_means_no_species_filter():
+    hits = Retriever().retrieve("how often to feed meals", k=20, species="any")
+    assert {"cat", "dog"} <= {h.chunk.species for h in hits}
+
+
+def test_retrieve_for_puppy_returns_puppy_guide_and_no_senior_or_cat_guides():
+    found = ids(retrieve_for_pet(make_pet(age=0), k=10))
+    assert "puppy_care" in found
+    assert "senior_pet_care" not in found
+    assert not any(i.startswith("cat_") for i in found)
+
+
+def test_retrieve_for_senior_cat_returns_senior_guide_and_no_puppy_or_dog_guides():
+    found = ids(retrieve_for_pet(make_pet(age=12, species=Species.CAT, breed="Tabby"), k=10))
+    assert "senior_pet_care" in found
+    assert "puppy_care" not in found
+    assert not any(i.startswith("dog_") for i in found)
+
+
+def test_retrieve_for_adult_dog_excludes_stage_specific_guides():
+    found = ids(retrieve_for_pet(make_pet(age=3), k=15))
+    assert "puppy_care" not in found and "senior_pet_care" not in found
+    assert any(i.startswith("dog_") for i in found)

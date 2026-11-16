@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pawpal_system import Owner, Pet, Priority, Recurrence, Scheduler, Task
+from pawpal_system import Owner, Pet, Priority, Recurrence, Scheduler, Species, Task
 
 
 def at(hour: int, minute: int = 0) -> datetime:
@@ -16,8 +16,8 @@ def main() -> None:
     owner = Owner(name="Chelsea", contact="chelsea@example.com",
                   available_start=6, available_end=22)
 
-    buddy = Pet(name="Buddy", age=3, breed="Golden Retriever")
-    whiskers = Pet(name="Whiskers", age=5, breed="Tabby Cat")
+    buddy = Pet(name="Buddy", age=3, breed="Golden Retriever", species=Species.DOG)
+    whiskers = Pet(name="Whiskers", age=5, breed="Tabby Cat", species=Species.CAT)
     owner.add_pet(buddy)
     owner.add_pet(whiskers)
 
