@@ -10,6 +10,7 @@ not given is dropped.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -270,3 +271,106 @@ def default_start_times(
         starts.append(cursor)
         cursor += timedelta(minutes=s.duration_minutes)
     return starts
+
+
+# ---------- retrieval-only mode (no API key, no model) ----------
+#
+# Every guide ends with a "## Suggested tasks" list such as
+#   - Morning walk, 30 minutes, daily, high priority.
+# Retrieval-only mode picks the guides the same way the AI mode does and reads those
+# lines directly. It needs no credentials, is deterministic, and is the automatic
+# fallback when the AI mode is unavailable. It can't tailor to the pet's existing
+# tasks beyond skipping duplicates, and it can't explain why a task suits the pet.
+
+MAX_GUIDE_SUGGESTIONS = 20  # above MAX_SUGGESTIONS; a pet's ~7 guides list about 18 tasks in all
+
+_SECTION_HEADING = "## suggested tasks"
+_DURATION = re.compile(r"(\d+)(?:\s*-\s*\d+)?\s*minutes?\b", re.IGNORECASE)
+_PRIORITY = re.compile(r"\b(low|medium|high)\s+priority\b", re.IGNORECASE)
+_REPEAT = re.compile(r"\b(daily|weekly)\b", re.IGNORECASE)
+
+
+def _task_lines(text: str) -> List[str]:
+    """Bullet lines in the guide's "Suggested tasks" section (empty if it has none)."""
+    lines, inside = [], False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("## "):
+            inside = stripped.lower() == _SECTION_HEADING
+        elif inside and stripped.startswith("- "):
+            lines.append(stripped[2:].strip().rstrip("."))
+    return lines
+
+
+def _parse_task_line(line: str, guide) -> Optional[Suggestion]:
+    """Read "Description, N minutes, <how often>, <level> priority"; None if it isn't one.
+
+    A lower bound is used for a range ("20-30 minutes" -> 20). Only "daily" and
+    "weekly" become repeats; anything less frequent ("every 3-4 weeks", "monthly",
+    "as prescribed") is left as a one-off task with the frequency kept in the reason.
+    """
+    parts = [p.strip() for p in line.split(",")]
+    description = parts[0]
+    duration = _DURATION.search(line)
+    if not description or not duration:
+        return None
+    priority_match = _PRIORITY.search(line)
+    priority = Priority[priority_match.group(1).upper()] if priority_match else Priority.MEDIUM
+
+    frequency = ", ".join(
+        p for p in parts[1:] if not _DURATION.search(p) and not _PRIORITY.search(p)
+    )
+    repeat = _REPEAT.search(frequency)
+    recurrence = Recurrence(repeat.group(1).lower()) if repeat and not re.match(
+        r"(every|monthly)", frequency, re.IGNORECASE) else Recurrence.NONE
+    return Suggestion(
+        description=description,
+        duration_minutes=int(duration.group(1)),
+        priority=priority,
+        recurrence=recurrence,
+        reason=(
+            f"Suggested frequency: {frequency}."
+            if frequency and frequency.lower() not in ("daily", "weekly")
+            else "A standard task from this guide."
+        ),
+        source_id=guide.id,
+        source_title=guide.title,
+        source_url=guide.source_url,
+    )
+
+
+def _fits_stage(description: str, stage: Optional[str]) -> bool:
+    """False for a task that names a life stage ("Kitten vaccination visit") the pet isn't in."""
+    if stage is None:
+        return True
+    words = set(re.findall(r"[a-z]+", description.lower()))
+    if words & {"puppy", "kitten"} and stage not in ("puppy", "kitten"):
+        return False
+    return not ("senior" in words and stage != "senior")
+
+
+def suggest_from_guides(pet: "Pet", retriever: Optional[Retriever] = None) -> List[Suggestion]:
+    """Suggestions read straight from the retrieved guides' task lists; no API key needed.
+
+    Skips tasks the pet already has and repeats, and applies the same limits on
+    description length and duration as the AI mode.
+    """
+    taken = {t.description.strip().lower() for t in pet.list_tasks()}
+    stage = life_stage_for(pet)
+    out: List[Suggestion] = []
+    for hit in retrieve_for_pet(pet, retriever=retriever):
+        for line in _task_lines(hit.chunk.text):
+            s = _parse_task_line(line, hit.chunk)
+            if (
+                s is None
+                or not MIN_DURATION <= s.duration_minutes <= MAX_DURATION
+                or len(s.description) > MAX_DESCRIPTION_LEN
+                or s.description.lower() in taken
+                or not _fits_stage(s.description, stage)
+            ):
+                continue
+            taken.add(s.description.lower())
+            out.append(s)
+            if len(out) == MAX_GUIDE_SUGGESTIONS:
+                return out
+    return out

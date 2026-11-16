@@ -23,7 +23,8 @@ KNOWLEDGE_DIR = Path(__file__).parent / "knowledge"
 _STOPWORDS = frozenset(
     "a an and are as at be but by for from has have how if in into is it its of on or "
     "so that the their them then there these they this to was were what when which will with "
-    "you your can may not no than also more most some such per".split()
+    "you your can may not no than also more most some such per "
+    "i me my we our do does did should would could am been being".split()
 )
 _WORD = re.compile(r"[a-z0-9]+")
 

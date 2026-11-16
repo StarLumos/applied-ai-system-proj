@@ -133,14 +133,28 @@ def test_adding_a_clashing_task_warns_but_still_adds(stub, added):
     assert any("Heads up" in w.value and "Vet visit" in w.value for w in at.warning)
 
 
-def test_api_failure_shows_an_error_and_the_app_keeps_working(stub, added):
+def test_api_failure_falls_back_to_guide_suggestions_with_a_notice(stub, added):
     stub(SuggestionError("Couldn't reach the AI service. Try again in a moment."))
     at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")
     assert not at.exception
-    assert any("Couldn't reach the AI service" in e.value for e in at.error)
-    assert added == []
+    assert any("AI suggestions are unavailable" in w.value and "reach the AI service" in w.value
+               for w in at.warning)
+    assert any("Morning walk" in m for m in texts(at.markdown))  # from dog_exercise's task list
+    assert any("Dog Exercise Needs" in c for c in texts(at.caption))
+    assert added == []  # still nothing added without a click
+
+
+def test_fallback_suggestions_can_be_added(stub, added):
+    stub(SuggestionError("No API credentials found. Set the ANTHROPIC_API_KEY environment variable."))
+    at, _, _ = make_app()
+    at.run()
+    at = click(at, "Suggest care tasks")
+    at = click(at, "Add to schedule")
+    assert not at.exception
+    assert len(added) == 1 and added[0].duration > 0
+    assert any("Added '" in s.value for s in at.success)
 
 
 def test_empty_result_shows_a_friendly_message(stub):
