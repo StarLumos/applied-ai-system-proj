@@ -1,0 +1,17 @@
+$ python demo.py guardrails
+# generated 2026-11-16 by make_evidence.py | Python 3.13.15 | exit code 0
+
+PawPal+ guardrail checks (live)
+  PASS  Species filter: dog gets 6 guides, none cat; cat gets 6 guides, none dog
+  PASS  Life-stage filter: puppy gets puppy_care only; senior gets senior_pet_care only; adult gets neither
+  PASS  Wrong-stage tasks left out: a 12-year-old cat is offered 'Senior wellness exam', not 'Kitten vaccination visit'
+  PASS  Duplicates skipped: existing 'morning WALK' is not suggested again, and no suggestion repeats
+  PASS  Limits and citations: 113 suggestions across 9 pet profiles: durations 1-240 min, each with an https source
+  PASS  Citation URLs intact: all 12 guides parse with a source URL (including one containing '---')
+  PASS  Bad knowledge files handled: an unreadable and an empty guide are skipped and logged; the good one still loads
+  PASS  Missing knowledge folder handled: a missing knowledge folder gives no suggestions and an error log, not a crash
+  PASS  Conflicts warn, never block: an overlapping task produces a warning and is still added
+  PASS  No private data in logs: 9 DEBUG log lines written; pet name, breed and task text absent
+
+10/10 guardrail checks passed
+App-level error containment and logging of user actions are covered by tests/test_app_flow.py and tests/test_logging.py (see the pytest output).

@@ -1,0 +1,42 @@
+$ python eval_retrieval.py
+# generated 2026-11-16 by make_evidence.py | Python 3.13.15 | exit code 0
+
+Profile cases (12 guides in the knowledge base)
+  PASS  adult dog (3)
+  PASS  puppy (0)
+  PASS  senior dog (10)
+  PASS  adult cat (4)
+  PASS  kitten (0)
+  PASS  senior cat (12)
+  PASS  unknown species, adult (3)
+
+Query cases
+  top1  'can my dog eat chocolate or grapes' -> ['toxic_foods_and_hazards', 'dog_feeding', 'puppy_care']
+  top1  'are lilies poisonous to cats' -> ['toxic_foods_and_hazards', 'cat_litter_grooming', 'cat_vaccinations_preventive_care']
+  top1  "how often should I trim my dog's nails" -> ['dog_nail_care', 'puppy_care', 'cat_vaccinations_preventive_care']
+  top1  'how often should I scoop the litter box' -> ['cat_litter_grooming', 'cat_feeding', 'cat_vaccinations_preventive_care']
+  top1  'how many meals a day should my kitten eat' -> ['cat_feeding', 'dog_feeding', 'puppy_care']
+  top1  'how many meals a day should my adult dog eat' -> ['dog_feeding', 'dog_exercise', 'puppy_care']
+  top1  'when do puppies get their first vaccines' -> ['puppy_care', 'dog_vaccinations_preventive_care', 'dog_exercise']
+  top1  'how do I give my dog a pill' -> ['medication_administration', 'toxic_foods_and_hazards', 'dog_nail_care']
+  top1  'can I give my dog ibuprofen' -> ['medication_administration', 'toxic_foods_and_hazards', 'dog_nail_care']
+  top1  'how do I play with my cat' -> ['cat_enrichment_play', 'dog_exercise', 'puppy_care']
+  top1  'when is my cat considered a senior' -> ['senior_pet_care', 'cat_litter_grooming', 'cat_vaccinations_preventive_care']
+  top1  'how much exercise does my dog need' -> ['dog_exercise', 'puppy_care', 'cat_enrichment_play']
+  top1  'what vaccines does my cat need' -> ['cat_vaccinations_preventive_care', 'cat_litter_grooming', 'cat_enrichment_play']
+  top1  'how often should an older pet see the vet' -> ['senior_pet_care', 'cat_vaccinations_preventive_care', 'dog_feeding']
+  top1  'my dog swallowed a raisin, what should I do' -> ['toxic_foods_and_hazards', 'cat_enrichment_play', 'dog_nail_care']
+  top1  'is it safe to give my cat tylenol' -> ['medication_administration', 'toxic_foods_and_hazards', 'cat_litter_grooming']
+  top3  'when does my kitten need its shots' -> ['cat_enrichment_play', 'cat_vaccinations_preventive_care', 'cat_feeding']
+  top1  'how often does my aging pet need to see the doctor' -> ['senior_pet_care', 'dog_feeding', 'cat_litter_grooming']
+  top1  "my dog's claws are getting long" -> ['dog_nail_care', 'puppy_care', 'dog_exercise']
+
+Summary
+  profile_cases: 7
+  profile_cases_passed: 7
+  profile_recall: 1.00
+  wrong_guides: 0
+  query_cases: 19
+  hit_at_1: 0.95
+  hit_at_3: 1.00
+  mrr: 0.97

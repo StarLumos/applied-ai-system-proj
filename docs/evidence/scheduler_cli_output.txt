@@ -1,0 +1,13 @@
+$ python main.py
+# generated 2026-11-16 by make_evidence.py | Python 3.13.15 | exit code 0
+
+Today's Schedule for Chelsea - Monday, November 16, 2026
+============================================================
+07:30-08:00  Morning walk         Buddy      HIGH
+08:00-08:15  Breakfast feeding    Whiskers   MEDIUM
+14:00-15:00  Vet check-up         Buddy      HIGH
+14:00-14:10  Medication           Whiskers   HIGH
+18:30-18:50  Grooming             Whiskers   LOW
+
+Conflicts:
+  WARNING: 'Vet check-up' (Buddy, 14:00-15:00) overlaps 'Medication' (Whiskers, 14:00-14:10) (different pets)
