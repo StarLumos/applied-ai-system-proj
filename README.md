@@ -24,13 +24,85 @@ Your final app should:
 
 ## Getting started
 
-### Setup
+### Requirements
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
+- **Python 3.9 or newer** (developed and tested on 3.13). Check with `python --version`.
+- Nothing else. PawPal+ needs **no API key, no account and no internet connection** once the dependencies are installed.
+
+### Setup (first time only)
+
+Run these from the project folder, the one that contains `app.py`.
+
+1. **Create a virtual environment**, so the project's packages stay separate from the rest of your computer:
+
+   ```bash
+   python -m venv .venv
+   ```
+
+2. **Activate it.** Your prompt should start with `(.venv)` afterward.
+
+   | Shell | Command |
+   |-------|---------|
+   | Windows PowerShell | `.venv\Scripts\Activate.ps1` |
+   | Windows Command Prompt | `.venv\Scripts\activate.bat` |
+   | macOS / Linux | `source .venv/bin/activate` |
+
+   If PowerShell says scripts are disabled, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once in that window, then activate again.
+
+3. **Install the dependencies** (Streamlit for the web app, pytest for the tests):
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Check that it works** by running the tests. They should all pass:
+
+   ```bash
+   python -m pytest -q
+   ```
+
+### Run it
+
+Do step 2 of the setup (activate the environment) in every new terminal, then pick one:
+
+| What | Command |
+|------|---------|
+| Web app | `streamlit run app.py` |
+| Command-line demo | `python main.py` |
+| Retrieval evaluation report | `python eval_retrieval.py` |
+| Tests | `python -m pytest -q` |
+
+`streamlit run app.py` opens the app in your browser at <http://localhost:8501>. If Streamlit asks for an email on the very first run, just press Enter.
+
+**A first session in the web app**
+
+1. Under **Add a Pet**, enter a name, choose a **species** (Dog or Cat gives the best suggestions), set the age and click **Add pet**.
+2. Under **Suggest Care Tasks**, pick the pet and click **Suggest care tasks**. Each suggestion shows its source.
+3. Edit a start time if you like, then click **Add to schedule** on the tasks you want. Nothing is added until you click.
+4. Under **Build Schedule**, click **Generate schedule** to see the day's plan and any conflicts. Click it again after adding more tasks.
+
+### Optional settings
+
+PawPal+ writes a log of what it does to `logs/pawpal.log` (and to the terminal). Pet names and task descriptions are never logged. You can change this with environment variables:
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `PAWPAL_LOG_LEVEL` | `INFO` | `DEBUG` also logs every retrieval query and skipped task; `WARNING` shows problems only |
+| `PAWPAL_LOG_DIR` | `logs/` in the project | Folder for the log file |
+
+For example, in PowerShell: `$env:PAWPAL_LOG_LEVEL = "DEBUG"` before `streamlit run app.py`. On macOS or Linux: `PAWPAL_LOG_LEVEL=DEBUG streamlit run app.py`.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `python` isn't found, or it's the wrong version | Try `py -3` (Windows) or `python3` (macOS/Linux), and check `python --version` |
+| `streamlit` isn't recognized | The environment isn't active. Activate it (setup step 2), or run `python -m streamlit run app.py` |
+| `ModuleNotFoundError: pawpal_system` (or `rag`, `suggestions`) | You're not in the project folder. `cd` to the folder that contains `app.py` and run again |
+| Port 8501 is already in use | Run `streamlit run app.py --server.port 8502` |
+| "No new tasks to suggest" | The pet already has every task the matching guides suggest. Try another pet, or a different species |
+| Suggestions look generic | The pet's species is set to Any. Add the pet again with Dog or Cat selected |
+| Something went wrong in the app | The page shows a short message. The details are in `logs/pawpal.log` |
 
 ### Suggested workflow
 
