@@ -3,6 +3,7 @@ import streamlit as st
 from datetime import datetime
 
 from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task, Scheduler
+from suggestions import SuggestionError, default_start_times, suggest_for_pet, suggestion_to_task
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -115,6 +116,62 @@ if owner.pets:
                 st.warning(f"Heads up: {warning}")
 else:
     st.info("Add a pet before scheduling tasks.")
+
+st.subheader("Suggest Care Tasks")
+st.caption(
+    "Suggestions come from a small set of pet-care guides, and each one cites its source. "
+    "They are general information, not veterinary advice. Nothing is added until you click Add."
+)
+if owner.pets:
+    suggest_pet = st.selectbox("Pet", owner.list_pets(), format_func=lambda p: p.name, key="suggest_pet")
+    suggest_day = st.date_input("Start date", value=datetime.now().date(), key="suggest_day")
+    if suggest_pet.species is Species.ANY:
+        st.caption("This pet's species is 'Any', so suggestions draw on dog and cat guides. "
+                   "Add the pet with a species for better matches.")
+
+    if st.button("Suggest care tasks"):
+        try:
+            with st.spinner("Reading the care guides..."):
+                found = suggest_for_pet(suggest_pet)
+            st.session_state.setdefault("suggestions", {})[suggest_pet.id] = {"items": found, "added": set()}
+        except SuggestionError as exc:
+            st.error(f"Couldn't get suggestions: {exc}")
+
+    state = st.session_state.get("suggestions", {}).get(suggest_pet.id)
+    if state is not None and not state["items"]:
+        st.info("No new tasks to suggest right now. The guides don't suggest anything "
+                f"{suggest_pet.name} doesn't already have.")
+    elif state is not None:
+        starts = default_start_times(state["items"], suggest_day)
+        for i, (suggestion, default_start) in enumerate(zip(state["items"], starts)):
+            with st.container(border=True):
+                st.markdown(
+                    f"**{suggestion.description}** · {suggestion.duration_minutes} min · "
+                    f"{suggestion.priority.name.title()} priority · "
+                    f"Repeats: {suggestion.recurrence.value.title()}"
+                )
+                st.caption(f"{suggestion.reason} Source: [{suggestion.source_title}]({suggestion.source_url})")
+                if i in state["added"]:
+                    st.success("Added to the schedule.")
+                    continue
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    start_clock = st.time_input(
+                        "Start time", value=default_start.time(), key=f"suggest_time_{suggest_pet.id}_{i}"
+                    )
+                with col2:
+                    st.write("")
+                    add_clicked = st.button("Add to schedule", key=f"suggest_add_{suggest_pet.id}_{i}")
+                if add_clicked:
+                    new_task = suggestion_to_task(suggestion, datetime.combine(suggest_day, start_clock))
+                    suggest_pet.add_task(new_task)
+                    state["added"].add(i)
+                    st.success(f"Added '{new_task.description}' for {suggest_pet.name}.")
+                    conflict = Scheduler(owner).check_conflict(new_task)
+                    if conflict:
+                        st.warning(f"Heads up: {conflict}")
+else:
+    st.info("Add a pet to get care suggestions.")
 
 st.divider()
 

@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from pawpal_system import Priority, Recurrence
+from pawpal_system import Priority, Recurrence, Task
 from rag import Hit, Retriever, life_stage_for, retrieve_for_pet
 
 if TYPE_CHECKING:
@@ -236,3 +237,36 @@ def suggest_for_pet(
     """Retrieve guides for ``pet`` and turn them into cited task suggestions."""
     hits = retrieve_for_pet(pet, retriever=retriever)
     return generate_suggestions(pet, hits, client=client, model=model)
+
+
+# ---------- turning suggestions into scheduled tasks ----------
+
+def suggestion_to_task(suggestion: Suggestion, start_time: datetime) -> Task:
+    """Build a (not yet attached) Task from a suggestion at the chosen start time."""
+    return Task(
+        description=suggestion.description,
+        start_time=start_time,
+        duration=suggestion.duration_minutes,
+        priority=suggestion.priority,
+        recurrence=suggestion.recurrence,
+    )
+
+
+def default_start_times(
+    suggestions: List[Suggestion], day: date, first_hour: int = 8, last_hour: int = 21
+) -> List[datetime]:
+    """Back-to-back default start times on ``day`` so suggestions don't overlap each other.
+
+    Starts at ``first_hour`` and runs on after each task. If the next start would be
+    after ``last_hour`` it starts over at ``first_hour``, so times never spill past
+    midnight; the user can edit any of them.
+    """
+    first = datetime.combine(day, time(first_hour))
+    cursor = first
+    starts = []
+    for s in suggestions:
+        if cursor.hour > last_hour or cursor.date() != day:
+            cursor = first
+        starts.append(cursor)
+        cursor += timedelta(minutes=s.duration_minutes)
+    return starts
