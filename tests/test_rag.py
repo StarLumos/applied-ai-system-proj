@@ -196,3 +196,35 @@ def test_retrieve_for_pet_has_no_duplicates_and_respects_per_topic():
 def test_retrieve_for_pet_with_species_any_spans_dog_and_cat_guides():
     found = ids(retrieve_for_pet(make_pet(age=3, species=Species.ANY, breed="")))
     assert len(found) == len(set(found)) and len(found) >= 5
+
+
+# ---------- frontmatter parsing ----------
+
+def test_dashes_inside_a_url_do_not_end_the_frontmatter(tmp_path):
+    (tmp_path / "g.md").write_text(
+        "---\ntitle: G\nsource_url: https://example.org/puppy---recommendations-part-i---care\n"
+        "source_url_2: https://example.org/two\nverified: yes\n---\n\n# Body\n\nText.\n",
+        encoding="utf-8",
+    )
+    (chunk,) = load_chunks(tmp_path)
+    assert chunk.source_urls == [
+        "https://example.org/puppy---recommendations-part-i---care", "https://example.org/two"]
+    assert chunk.text.startswith("# Body")
+    assert "verified" not in chunk.text  # metadata lines must not leak into the guide text
+
+
+def test_every_guides_source_urls_survive_parsing():
+    """Regression: a '---' inside a URL once truncated puppy_care's citation to '.../puppy'."""
+    from pathlib import Path
+
+    from rag import KNOWLEDGE_DIR
+
+    chunks = {c.id: c for c in load_chunks()}
+    for path in Path(KNOWLEDGE_DIR).glob("*.md"):
+        if path.name.lower() == "readme.md":
+            continue
+        in_file = [line.split(":", 1)[1].strip() for line in path.read_text(encoding="utf-8").splitlines()
+                   if line.startswith("source_url")]
+        assert chunks[path.stem].source_urls == in_file, path.name
+        assert "source_url" not in chunks[path.stem].text, f"{path.name}: metadata leaked into the body"
+    assert chunks["puppy_care"].source_url.endswith("part-i---veterinary-care")

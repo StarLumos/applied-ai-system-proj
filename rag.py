@@ -77,17 +77,20 @@ def tokenize(text: str) -> List[str]:
 
 def _parse_frontmatter(raw: str) -> tuple[Dict[str, str], str]:
     """Split ``---`` delimited ``key: value`` frontmatter from the body."""
-    if not raw.startswith("---"):
+    lines = raw.splitlines()
+    if not lines or lines[0].strip() != "---":
         return {}, raw
-    parts = raw.split("---", 2)
-    if len(parts) < 3:
+    # The closing delimiter is a line that is exactly "---". A "---" inside a value, such as
+    # a URL like ".../puppy---recommendations", must not end the frontmatter.
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
         return {}, raw
     meta: Dict[str, str] = {}
-    for line in parts[1].splitlines():
+    for line in lines[1:end]:
         if ":" in line:
             key, value = line.split(":", 1)
             meta[key.strip()] = value.strip()
-    return meta, parts[2].strip()
+    return meta, "\n".join(lines[end + 1:]).strip()
 
 
 def _parse_list(value: str) -> List[str]:

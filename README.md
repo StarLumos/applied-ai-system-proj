@@ -1,39 +1,35 @@
-# PawPal+ (Module 2 Project)
+# PawPal+ with RAG: care suggestions grounded in sourced guides
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+This project extends the original **PawPal+ (without RAG)**, which is described next.
 
-## Scenario
+## Original project: PawPal+ (without RAG)
 
-A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
+PawPal+ was a Streamlit scheduling assistant for busy pet owners. Its goal was to let an owner track care tasks (walks, feeding, medication, grooming) for one or more pets and turn them into a daily plan that respects priority and the owner's available hours. It could sort and filter tasks, detect overlapping tasks across pets, repeat daily and weekly tasks automatically, and was covered by 26 automated tests. Its full documentation is in [docs/original_pawpal.md](docs/original_pawpal.md).
 
-- Track pet care tasks (walks, feeding, meds, enrichment, grooming, etc.)
-- Consider constraints (time available, priority, owner preferences)
-- Produce a daily plan and explain why it chose that plan
+## Current project: PawPal+ with RAG
 
-Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
+**What it does.** The original scheduler still works, and the app now also answers a question the owner usually has first: *what care does my pet actually need?* You add a pet with its species and age, and PawPal+ **retrieves** the matching pages from a knowledge base of 12 care guides (feeding, exercise, vaccines, grooming, medication and safety for dogs and cats, plus puppy and senior care). It turns those guides' task lists into suggestions, each showing its **source link**. You review them, adjust the start time, and add the ones you want to your schedule, where the original conflict checking applies.
 
-## What you will build
+**Why it matters.** New pet owners often don't know what a puppy or a 12-year-old cat needs, and generic advice online is hard to trust. Here every suggestion traces back to a named source, the guides were checked against those sources by hand, and nothing reaches the schedule until the owner clicks Add.
 
-Your final app should:
+## Architecture overview
 
-- Let a user enter basic owner + pet info
-- Let a user add/edit tasks (duration + priority at minimum)
-- Generate a daily schedule/plan based on constraints and priorities
-- Display the plan clearly (and ideally explain the reasoning)
-- Include tests for the most important scheduling behaviors
+![PawPal+ system diagram](diagrams/system_diagram.png)
 
-## Getting started
+The diagram ([Mermaid source](diagrams/system_diagram.mmd)) is a class diagram of the whole system. Reading it by stage:
 
-### Requirements
+- **Input:** the owner enters a pet (species, age, breed) in the Streamlit app, and the 12 guides sit in `knowledge/`, each with a source URL.
+- **Process:** `rag.py` turns the pet into a life stage (puppy, adult, senior) and runs one query per care topic. The `Retriever` ranks guides with BM25 and drops any that don't fit the pet's species or life stage. `suggestions.py` reads each retrieved guide's "Suggested tasks" list into cited `Suggestion` objects, and the original `Scheduler` sorts tasks and finds conflicts.
+- **Output:** suggestion cards with sources, and a daily schedule with conflict warnings.
+- **Where people and tests check the results:** the owner reviews every suggestion and its source before clicking Add and decides what to do about conflicts. A person checked each guide against its source pages. The `pytest` suite and a retrieval evaluation (`eval_retrieval.py`) check the code and the retrieval quality, and `logs/pawpal.log` records what the system did.
 
-- **Python 3.9 or newer** (developed and tested on 3.13). Check with `python --version`.
-- Nothing else. PawPal+ needs **no API key, no account and no internet connection** once the dependencies are installed.
+## Setup
 
-### Setup (first time only)
+**Requirements:** Python 3.9 or newer (developed and tested on 3.13). No API key, account or internet connection is needed once the packages are installed.
 
 Run these from the project folder, the one that contains `app.py`.
 
-1. **Create a virtual environment**, so the project's packages stay separate from the rest of your computer:
+1. **Create a virtual environment:**
 
    ```bash
    python -m venv .venv
@@ -47,258 +43,114 @@ Run these from the project folder, the one that contains `app.py`.
    | Windows Command Prompt | `.venv\Scripts\activate.bat` |
    | macOS / Linux | `source .venv/bin/activate` |
 
-   If PowerShell says scripts are disabled, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once in that window, then activate again.
+   If PowerShell says scripts are disabled, run `Set-ExecutionPolicy -Scope Process RemoteSigned` once in that window and try again.
 
-3. **Install the dependencies** (Streamlit for the web app, pytest for the tests):
+3. **Install the dependencies** (Streamlit and pytest):
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Check that it works** by running the tests. They should all pass:
+4. **Check that it works.** All tests should pass:
 
    ```bash
    python -m pytest -q
    ```
 
-### Run it
+5. **Run it** (activate the environment first in any new terminal):
 
-Do step 2 of the setup (activate the environment) in every new terminal, then pick one:
+   | What | Command |
+   |------|---------|
+   | Web app (opens at <http://localhost:8501>) | `streamlit run app.py` |
+   | Command-line demo of the scheduler | `python main.py` |
+   | Retrieval evaluation report | `python eval_retrieval.py` |
 
-| What | Command |
-|------|---------|
-| Web app | `streamlit run app.py` |
-| Command-line demo | `python main.py` |
-| Retrieval evaluation report | `python eval_retrieval.py` |
-| Tests | `python -m pytest -q` |
+   In the app: add a pet and choose its **species**, click **Suggest care tasks**, click **Add to schedule** on the tasks you want, then **Generate schedule**. Click Generate again after adding more tasks.
 
-`streamlit run app.py` opens the app in your browser at <http://localhost:8501>. If Streamlit asks for an email on the very first run, just press Enter.
+**If something goes wrong:** `streamlit` not recognized means the environment isn't active (or use `python -m streamlit run app.py`). `ModuleNotFoundError` means you're not in the project folder. Port in use: add `--server.port 8502`. Details of any error are in `logs/pawpal.log`; set `PAWPAL_LOG_LEVEL=DEBUG` for more.
 
-**A first session in the web app**
+## Sample interactions
 
-1. Under **Add a Pet**, enter a name, choose a **species** (Dog or Cat gives the best suggestions), set the age and click **Add pet**.
-2. Under **Suggest Care Tasks**, pick the pet and click **Suggest care tasks**. Each suggestion shows its source.
-3. Edit a start time if you like, then click **Add to schedule** on the tasks you want. Nothing is added until you click.
-4. Under **Build Schedule**, click **Generate schedule** to see the day's plan and any conflicts. Click it again after adding more tasks.
+These are real outputs from the running system. There is no language model, so the same input always gives the same output.
 
-### Optional settings
-
-PawPal+ writes a log of what it does to `logs/pawpal.log` (and to the terminal). Pet names and task descriptions are never logged. You can change this with environment variables:
-
-| Variable | Default | Effect |
-|----------|---------|--------|
-| `PAWPAL_LOG_LEVEL` | `INFO` | `DEBUG` also logs every retrieval query and skipped task; `WARNING` shows problems only |
-| `PAWPAL_LOG_DIR` | `logs/` in the project | Folder for the log file |
-
-For example, in PowerShell: `$env:PAWPAL_LOG_LEVEL = "DEBUG"` before `streamlit run app.py`. On macOS or Linux: `PAWPAL_LOG_LEVEL=DEBUG streamlit run app.py`.
-
-### Troubleshooting
-
-| Problem | Fix |
-|---------|-----|
-| `python` isn't found, or it's the wrong version | Try `py -3` (Windows) or `python3` (macOS/Linux), and check `python --version` |
-| `streamlit` isn't recognized | The environment isn't active. Activate it (setup step 2), or run `python -m streamlit run app.py` |
-| `ModuleNotFoundError: pawpal_system` (or `rag`, `suggestions`) | You're not in the project folder. `cd` to the folder that contains `app.py` and run again |
-| Port 8501 is already in use | Run `streamlit run app.py --server.port 8502` |
-| "No new tasks to suggest" | The pet already has every task the matching guides suggest. Try another pet, or a different species |
-| Suggestions look generic | The pet's species is set to Any. Add the pet again with Dog or Cat selected |
-| Something went wrong in the app | The page shows a short message. The details are in `logs/pawpal.log` |
-
-### Suggested workflow
-
-1. Read the scenario carefully and identify requirements and edge cases.
-2. Draft a UML diagram (classes, attributes, methods, relationships).
-3. Convert UML into Python class stubs (no logic yet).
-4. Implement scheduling logic in small increments.
-5. Add tests to verify key behaviors.
-6. Connect your logic to the Streamlit UI in `app.py`.
-7. Refine UML so it matches what you actually built.
-
-## 🖥️ Sample Output
+**1. An adult dog**
 
 ```
-Today's Schedule for Chelsea - Tuesday, October 20, 2026
-============================================================
-07:30-08:00  Morning walk         Buddy      HIGH
-08:00-08:15  Breakfast feeding    Whiskers   MEDIUM
-14:00-15:00  Vet check-up         Buddy      HIGH
-18:30-18:50  Grooming             Whiskers   LOW
+Input:   species=dog, age=3, breed="Golden Retriever", no tasks yet   (life stage: adult)
+Output:  10 suggestions, the first six shown:
+  Breakfast feeding                  10 min  HIGH    daily   <- Dog Feeding Frequency
+  Dinner feeding                     10 min  HIGH    daily   <- Dog Feeding Frequency
+  Morning walk                       30 min  HIGH    daily   <- Dog Exercise Needs
+  Evening walk                       20 min  MEDIUM  daily   <- Dog Exercise Needs
+  Play or training session           15 min  LOW     daily   <- Dog Exercise Needs
+  Vaccination booster appointment    45 min  HIGH    none    <- Dog Vaccinations and Preventive Care
 ```
 
-## 🧪 Testing PawPal+
-
-```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
-```
-```
-python -m pytest
-```
-This command checks the following:
-- Basics: mark_complete flips a task's status, and add_task adds to the pet's task list.
-
-- Recurrence:
---> Daily and weekly tasks spawn the next occurrence.
---> Completing the same task twice doesn't create a duplicate.
---> Late or early completion lands on the correct next slot.
---> A completion exactly at the next slot skips to the one after.
---> A non-recurring task spawns nothing.
---> The new task copies the old one's fields but gets a fresh id.
---> A task with no pet returns an unattached next task.
-
-- Sorting:
---> Tasks come back in chronological order by full datetime, with ties broken by priority.
---> sort_by_time is stable, can be reversed, and doesn't mutate its input.
---> Empty inputs return empty lists.
-
-- Conflict detection:
---> Same-time tasks are flagged for the same pet and across pets.
---> Back-to-back tasks and completed tasks don't conflict.
---> A contained task counts as a single conflict.
---> Chained overlaps report only the real pairs.
---> check_conflict returns a message or None without raising.
-
-- Availability: build_schedule excludes completed tasks and tasks outside the owner's available hours, and returns the rest in order.
-
---> A task that crosses midnight is never considered available.
---> A zero-duration task at another task's start time is flagged by conflict_warnings but not by overlaps or check_conflict.
-
-Confidence Level on system's reliability based on test results: 5 stars!
-
-Sample test output:
+**2. A puppy: the same dog at age 0 gets extra, stage-specific tasks**
 
 ```
-========================= test session starts =========================
-platform win32 -- Python 3.13.15, pytest-9.1.1, pluggy-1.7.0
-rootdir: C:\Users\kai_1\Coding\codepath\aiEng101\pawpal
-plugins: anyio-4.15.1
-collected 26 items                                                     
-
-tests\test_pawpal.py ..........................                  [100%]
-
-========================= 26 passed in 0.06s ==========================
+Input:   species=dog, age=0, breed="Labrador"   (life stage: puppy)
+Output:  13 suggestions: the 10 above, plus
+  Puppy meals                        10 min  HIGH    daily   <- Puppy Care Basics
+  Short play or training session     10 min  MEDIUM  daily   <- Puppy Care Basics
+  Vet vaccination visit              45 min  HIGH    none    <- Puppy Care Basics
+  (no "Senior wellness exam", no cat tasks)
 ```
 
-## 🧩 System Design
-
-The final UML diagram shows how the classes in `pawpal_system.py` fit together. The Mermaid source is in [`diagrams/uml_final.mmd`](diagrams/uml_final.mmd), and the original draft is in [`diagrams/uml.mmd`](diagrams/uml.mmd).
-
-![PawPal+ final UML class diagram](diagrams/uml_final.png)
-
-## 📐 Smarter Scheduling
-
-### Implementation summary
-
-The scheduling logic lives in `pawpal_system.py`and is built from four classes plus two enums (`Priority` and `Recurrence`):
-
-- **Owner** holds a list of pets and the hours of the day they're available. `is_available(task)` checks whether a task fits inside those hours, and `get_all_tasks()` gathers every pet's tasks.
-- **Pet** holds its own list of tasks. Tasks live only on pets, so there is a single source of truth.
-- **Task** has a start time, duration, priority, and recurrence. It knows its `end_time`, whether it `overlaps` another task, and how to `mark_complete()`. Completing a daily or weekly task creates the next occurrence and adds it to the same pet.
-- **Scheduler** wraps an `Owner` and does the planning:
-  - `filter_tasks` narrows tasks by pet, completion, minimum priority, or time range.
-  - `sort_tasks` orders tasks chronologically, with higher priority first on ties.
-  - `find_conflicts` finds overlapping pairs across all pets, since the owner can only do one thing at a time.
-  - `build_schedule` returns the pending tasks that fit the owner's available hours, in order.
-
-Owner ↔ Pet ↔ Task are linked in both directions. `add_pet` and `add_task` keep both sides in sync and move an item off its previous parent. The classes use identity equality, so two identical-looking tasks or pets are still treated as separate objects.
-
-### Features at a glance
-
-| Feature | Method(s) | How it works |
-|---------|-----------|--------------|
-| Task sorting | `Scheduler.sort_tasks`, `Scheduler.sort_by_time` | `sort_tasks` sorts on `(start_time, -priority)`: earliest first, higher priority wins ties. `sort_by_time` sorts on start time only; the sort is stable, so ties keep input order, and `reverse=True` gives latest first. Both return a new list and never reorder a pet's own task list. |
-| Filtering | `Scheduler.filter_tasks`, `Scheduler.filter_by_status_or_pet` | `filter_tasks` combines pet, completion status, minimum priority and a start/end window; omitted criteria are ignored, and `min_priority` works because `Priority` is an `IntEnum`. `filter_by_status_or_pet` matches the pet by case-insensitive exact name, optionally with status. |
-| Owner availability | `Owner.is_available` | Keeps only tasks that start and end inside the owner's daily window. A task that runs past midnight is never available. |
-| Schedule building | `Scheduler.build_schedule` | Drops completed tasks, drops tasks outside the owner's available hours, then sorts the rest with `sort_tasks`. The app lists pending tasks left out for falling outside those hours, so nothing disappears silently. |
-| Conflict detection | `Task.overlaps`, `Scheduler.find_conflicts` | `overlaps` uses a half-open interval check (`a.start < b.end and b.start < a.end`): back-to-back tasks don't conflict, identical start times do. `find_conflicts` sorts the tasks, then compares each against the ones after it and stops once a later task starts at or after the current one's end, so it does extra work only where tasks actually overlap. It checks across all pets, since the owner can only do one thing at a time. |
-| Conflict warnings | `Scheduler.conflict_warnings`, `conflicts_with`, `check_conflict` | `conflict_warnings` covers pending tasks and returns one message per overlapping pair, naming both tasks, their pets and times, and labeled "same pet" or "different pets". `check_conflict` tests one new task against all pending tasks; the app shows its result as a warning after the task is added. Conflicts are reported, never raised, and never block a task. |
-| Recurring tasks | `Recurrence.interval`, `Task.mark_complete` | Daily or weekly. Completing a repeating task copies its description, duration, priority and recurrence into a new task with a fresh `id`, attached to the same pet. The next start is the original start plus the interval, repeated until it is after `now`, so a late completion skips ahead but keeps the time of day. Completing an already completed task does nothing, so double-clicks can't create duplicates. |
-| Data integrity | `Owner.add_pet`, `Pet.add_task`, `Owner.get_all_tasks` | Tasks live only on pets and are gathered on demand. Both directions of each link stay in sync, and an item is detached from its previous parent. The classes use identity equality, so identical-looking tasks or pets stay separate. |
-| Streamlit display | `app.py` | A task table you can filter by pet, status and minimum priority and sort by time, with total, pending and completed counts. One `st.warning` per conflicting pair, or an `st.success` when there are none. A schedule summary showing task count and total minutes. A form that marks a task complete and reports the next occurrence. |
-
-**Caveats**
-
-- `find_conflicts` counts completed tasks too, so filter first if you only want pending ones. `conflict_warnings` already does this.
-- A zero-duration task at another task's start time can be flagged by `find_conflicts` depending on sort order, but `overlaps` and `check_conflict` never flag it.
-
-### Sorting
-
-- `Scheduler.sort_tasks(tasks)` orders tasks by start time. When two start at the same time, the higher priority comes first. `build_schedule` uses this.
-- `Scheduler.sort_by_time(tasks=None, reverse=False)` orders by start time only. The sort is stable, so ties keep their input order. It defaults to every task across the owner's pets, and `reverse=True` gives latest first.
-- Both return a new list and leave each pet's own task list untouched.
-
-### Filtering
-
-- `Scheduler.filter_tasks(...)` narrows tasks by pet object, `completed`, `min_priority`, and a `start`/`end` time range. Any criterion you leave out is ignored.
-- `Scheduler.filter_by_status_or_pet(completed=None, pet_name=None)` filters by completion status and/or pet name. The name match is case-insensitive and exact. Giving both narrows to tasks matching both.
-- `Owner.is_available(task)` checks that a task falls inside the owner's available hours.
-- `Scheduler.build_schedule()` combines these: pending tasks only, within available hours, sorted with `sort_tasks`.
-
-### Conflict detection
-
-The owner can only do one thing at a time, so conflicts are checked across all pets as well as within one pet. Two tasks at exactly the same time count as a conflict. Back-to-back tasks (one ends when the next starts) do not.
-
-- `Task.overlaps(other)` is true when the two time windows overlap.
-- `Scheduler.find_conflicts(tasks=None)` sorts the tasks and sweeps once, stopping early for each task once the next one starts after it ends. It returns the overlapping pairs. It counts completed tasks too, so filter first if you only want pending ones.
-- `Scheduler.conflict_warnings(tasks=None)` returns one readable message per overlapping pair of pending tasks, labeled "same pet" or "different pets".
-- `Scheduler.conflicts_with(task)` lists the pending tasks that overlap one task.
-- `Scheduler.check_conflict(task)` returns a warning message for one task, or `None` if it is clear.
-
-This is a lightweight strategy: conflicts are reported as messages and never raise or reject a task. The app shows a warning when you add a clashing task and lists conflicts when you generate the schedule.
-
-### Recurring tasks
-
-- `Recurrence.interval()` gives the gap between occurrences: one day for `DAILY`, one week for `WEEKLY`, and `None` for `NONE`.
-- `Task.mark_complete(now=None)` marks the task done. For a recurring task it creates the next occurrence, copying the description, duration, priority and recurrence, and attaches it to the same pet via `Pet.add_task`. It returns the new task, or `None` for a one-off task.
-- Calling it again on an already completed task does nothing, so double-clicks can't create duplicates.
-- If a task is completed late, the next occurrence skips ahead to the first slot after `now` instead of landing in the past. The next start is computed from the task's original start time, so the schedule keeps its cadence. The optional `now` argument exists so tests don't depend on the clock.
-
-## 📸 Demo Walkthrough
-
-Launch the app with `streamlit run app.py`, or run the command-line demo with `python main.py`.
-
-### Main UI features
-
-The Streamlit page runs top to bottom, and each section builds on the one above it:
-
-- **Owner:** edit the owner's name.
-- **Add a Pet:** enter a name, age and breed. The name is required, and an error shows if it's blank. Added pets appear in a table with their task counts.
-- **Schedule a Task:** pick a pet, then set a description, date, start time, duration (1-240 minutes), priority (Low, Medium, High) and repeat (None, Daily, Weekly). A success message confirms the task was added. If it overlaps a pending task, a warning appears too, and the task is still added.
-- **All Tasks:** see total, pending and completed counts, and a table of every task. Filter by pet, status (All, Pending, Completed) and minimum priority, and sort by time (earliest or latest first) or by time then priority. Below the table, a conflict check shows one warning per overlapping pair, or a success message when there are none. A form marks a task complete and reports the next occurrence when the task repeats.
-- **Build Schedule:** click **Generate schedule** to see pending tasks in order within the owner's available hours. It shows a success summary (task count and total minutes), a table, a warning listing any tasks left out for falling outside available hours, and conflict warnings.
-
-### Example workflow
-
-1. **Add a pet.** Under *Add a Pet*, enter "Buddy", age 3, breed "Golden Retriever" and click **Add pet**. Buddy appears in the pets table with 0 tasks.
-2. **Schedule a task.** Under *Schedule a Task*, choose Buddy and add "Vet check-up" at 14:00 for 60 minutes, High priority. Then add "Morning walk" at 07:30 for 30 minutes, High priority, repeating Daily. Each shows a success message.
-3. **Add a clashing task.** Add "Medication" at 14:00 for 10 minutes. The task is added, and a warning says it overlaps "Vet check-up". PawPal+ warns instead of blocking, so you decide how to resolve it.
-4. **Review All Tasks.** The table lists tasks in time order even though they were entered out of order. Try filtering to High priority only, or switching to latest first. The conflict section lists the Vet check-up / Medication overlap.
-5. **View today's schedule.** Click **Generate schedule**. Pending tasks appear in chronological order, with the conflict warning repeated beneath the table.
-6. **Complete a recurring task.** Mark "Morning walk" complete. It moves to Completed, and a new Daily occurrence is scheduled for the next day at 07:30. Marking it complete again does nothing, so it can't create duplicates.
-
-### Scheduler behaviors shown
-
-- **Sorting:** tasks are entered out of order and displayed chronologically. Tasks that start at the same time are ordered by priority, then by the order they were added.
-- **Filtering:** the task table narrows by pet, status and priority, and the schedule excludes completed tasks and tasks outside the owner's available hours.
-- **Conflict warnings:** overlapping tasks are flagged across pets as well as within one pet, because the owner can only do one thing at a time. Back-to-back tasks are not flagged.
-- **Recurring tasks:** completing a daily or weekly task creates the next occurrence automatically.
-
-### Sample CLI output
-
-`python main.py` builds an owner with two pets and five tasks, added out of order, with one deliberate clash at 14:00. Running it prints the sorted schedule and the conflict warning:
+**3. A senior cat: species and age change everything**
 
 ```
-Today's Schedule for Chelsea - Tuesday, October 20, 2026
-============================================================
-07:30-08:00  Morning walk         Buddy      HIGH
-08:00-08:15  Breakfast feeding    Whiskers   MEDIUM
-14:00-15:00  Vet check-up         Buddy      HIGH
-14:00-14:10  Medication           Whiskers   HIGH
-18:30-18:50  Grooming             Whiskers   LOW
-
-Conflicts:
-  WARNING: 'Vet check-up' (Buddy, 14:00-15:00) overlaps 'Medication' (Whiskers, 14:00-14:10) (different pets)
+Input:   species=cat, age=12, breed="Tabby"   (life stage: senior)
+Output:  14 suggestions, including
+  Senior wellness exam               60 min  HIGH    none    <- Senior Pet Care
+  Scoop litter box                    5 min  HIGH    daily   <- Cat Litter Box and Grooming
+  Flea preventive                     5 min  HIGH    none    <- Cat Vaccinations and Preventive Care
+  (no "Kitten vaccination visit", no dog tasks)
+Source:  https://vcahospitals.com/resources/senior/when-is-your-pet-considered-a-senior
 ```
+
+**4. Searching the guides with a question**
+
+```
+Input:   "can my dog eat chocolate or grapes"
+Output:  1. toxic_foods_and_hazards   (score 8.57)
+            https://www.aspca.org/pet-care/aspca-poison-control/people-foods-avoid-feeding-your-pets
+         2. dog_feeding              (score 2.06)
+         3. puppy_care               (score 1.38)
+```
+
+**5. A conflict is warned about, not blocked.** An owner with a vet check-up at 08:00 adds "Breakfast feeding" at 08:15:
+
+```
+Output:  Heads up: 'Breakfast feeding' (Buddy, 08:15-08:25) overlaps
+         'Vet check-up' (Buddy, 08:00-09:00) (same pet)
+         (the task is still added; the owner decides what to do)
+```
+
+## Design decisions
+
+- **Retrieval plus curated task lists, not an LLM writing the advice.** It needs no key, gives identical results every time, and every suggestion traces to a source. The trade-off: suggestions are generic, with a canned reason, and aren't tailored to the pet's situation.
+- **Plain BM25 keyword search, no embeddings.** It is simple and easy to test offline. The trade-off: it can't connect different wording ("shots" and "vaccines").
+- **12 hand-checked guides for dogs and cats only.** The content is trustworthy, but it's small and covers no other animals.
+- **The owner stays in control.** Suggestions are proposals, and conflicts warn but never block. The trade-off is a few more clicks.
+
+## Testing summary
+
+- **What worked:** 130 tests pass (the 26 original plus 104 new), including tests that drive the real page.
+- **What didn't, at first:**
+  - Filler words like "my" and "should" outranked the one meaningful word in a question.
+  - Selectboxes handed back copies of pets, so added tasks silently vanished. Only tests that drove the real page found it.
+  - My first drafts of the guides contained claims their sources didn't support.
+- **Still weak:** "when does my kitten need its shots" ranks the play guide first and the vaccine guide second. The evaluation is also small and I wrote it myself, so its scores are optimistic.
+- **What I learned:** the bugs that mattered showed up in realistic end-to-end use, not in the neat unit tests.
+
+## Reflection
+
+This project taught me that an AI assistant can produce something that looks finished long before it is correct: my first guide drafts read well but misquoted their sources, and only reading the actual pages caught it. It also taught me to test the real thing, not a stand-in. Mocks and unit tests passed while the real page was losing tasks. Finally, I learned that removing a feature can be the better engineering. A language-model step I couldn't verify live was worse than a simpler, traceable one I could test completely.
+
+## More documentation
+
+- [Original PawPal+ (without RAG)](docs/original_pawpal.md): scheduler design, features and demo
+- [Knowledge base notes](knowledge/README.md): guide format and how each was verified
+- Diagrams: [system diagram](diagrams/system_diagram.mmd), [original UML](diagrams/uml_final.mmd)
+- [reflection.md](reflection.md) and [ai_interactions.md](ai_interactions.md): project reflections
