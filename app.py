@@ -3,14 +3,7 @@ import streamlit as st
 from datetime import datetime
 
 from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task, Scheduler
-from suggestions import (
-    NotConfiguredError,
-    SuggestionError,
-    default_start_times,
-    suggest_for_pet,
-    suggest_from_guides,
-    suggestion_to_task,
-)
+from suggestions import default_start_times, suggest_from_guides, suggestion_to_task
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -137,24 +130,10 @@ if owner.pets:
                    "Add the pet with a species for better matches.")
 
     if st.button("Suggest care tasks"):
-        notice = None
-        with st.spinner("Reading the care guides..."):
-            try:
-                found = suggest_for_pet(suggest_pet)
-            except NotConfiguredError:
-                # No API key: expected, so use the guides' own task lists without any warning.
-                found = suggest_from_guides(suggest_pet)
-            except SuggestionError as exc:
-                # AI mode is set up but failed (network, refusal, bad reply): fall back and say so.
-                found = suggest_from_guides(suggest_pet)
-                notice = (f"AI suggestions are unavailable ({exc}) Showing the standard tasks from the "
-                          "matching care guides instead. They aren't tailored to this pet.")
         st.session_state.setdefault("suggestions", {})[suggest_pet.id] = {
-            "items": found, "added": set(), "notice": notice}
+            "items": suggest_from_guides(suggest_pet), "added": set()}
 
     state = st.session_state.get("suggestions", {}).get(suggest_pet.id)
-    if state is not None and state["notice"]:
-        st.warning(state["notice"])
     if state is not None and not state["items"]:
         st.info("No new tasks to suggest right now. The guides don't suggest anything "
                 f"{suggest_pet.name} doesn't already have.")

@@ -1,4 +1,4 @@
-"""Retrieval-only mode: suggestions read straight from the guides, no API key or model."""
+"""Suggestions read from the guides' "Suggested tasks" lists: parsing, filtering and citations."""
 
 from datetime import datetime
 from types import SimpleNamespace
@@ -114,11 +114,7 @@ def test_no_matching_guides_gives_no_suggestions():
     assert suggest_from_guides(make_pet(), retriever=Retriever([])) == []
 
 
-def test_retrieval_only_mode_never_creates_an_api_client(monkeypatch):
-    import anthropic
-
-    def boom(*args, **kwargs):
-        raise AssertionError("the API client must not be created")
-
-    monkeypatch.setattr(anthropic, "Anthropic", boom)
-    assert suggest_from_guides(make_pet())
+def test_results_are_deterministic():
+    first = [(s.description, s.source_id) for s in suggest_from_guides(make_pet())]
+    again = [(s.description, s.source_id) for s in suggest_from_guides(make_pet())]
+    assert first == again and first

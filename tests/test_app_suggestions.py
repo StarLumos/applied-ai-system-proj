@@ -1,25 +1,24 @@
-"""UI tests for the "Suggest Care Tasks" section, using Streamlit's AppTest and a stubbed model."""
+"""UI tests for the "Suggest Care Tasks" section, using Streamlit's AppTest.
 
+Suggestions come from the real guides, so the tests are deterministic. For an adult dog the
+first suggestion is "Breakfast feeding" (10 min, high priority, daily), from dog_feeding.
+"""
+
+from datetime import datetime, time
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
 import suggestions
-from pawpal_system import Owner, Pet, Priority, Recurrence, Species
-from suggestions import NotConfiguredError, Suggestion, SuggestionError
+from pawpal_system import Owner, Pet, Priority, Recurrence, Species, Task
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
 
 
-def sug(description, minutes=30, priority=Priority.HIGH, recurrence=Recurrence.DAILY):
-    return Suggestion(description, minutes, priority, recurrence, "Dogs need exercise.",
-                      "dog_exercise", "Dog Exercise Needs", "https://example.org/guide")
-
-
-def make_app(species=Species.DOG):
+def make_app(species=Species.DOG, age=3):
     owner = Owner(name="Jordan")
-    pet = Pet(name="Rex", age=3, breed="Beagle", species=species)
+    pet = Pet(name="Rex", age=age, breed="Beagle", species=species)
     owner.add_pet(pet)
     at = AppTest.from_file(APP, default_timeout=30)
     at.session_state["owner"] = owner
@@ -33,17 +32,6 @@ def click(at, label):
 
 def texts(elements):
     return [e.value for e in elements]
-
-
-@pytest.fixture
-def stub(monkeypatch):
-    def install(result):
-        def fake(pet, **kwargs):
-            if isinstance(result, Exception):
-                raise result
-            return result
-        monkeypatch.setattr(suggestions, "suggest_for_pet", fake)
-    return install
 
 
 @pytest.fixture
@@ -68,35 +56,41 @@ def test_page_loads_without_error_and_shows_the_section():
     assert any(h.value == "Suggest Care Tasks" for h in at.subheader)
 
 
-def test_suggestions_are_listed_with_sources_and_nothing_is_added_yet(stub, added):
-    stub([sug("Morning walk"), sug("Dinner feeding")])
-    at, _, pet = make_app()
+def test_suggestions_are_listed_with_sources_and_nothing_is_added_yet(added):
+    at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")
     assert not at.exception
+    assert not at.warning and not at.error  # no notices: this mode has nothing to report
+    assert any("Breakfast feeding" in m for m in texts(at.markdown))
     assert any("Morning walk" in m for m in texts(at.markdown))
-    assert any("Dog Exercise Needs" in c for c in texts(at.caption))
-    assert added == []  # nothing added until the user clicks Add
+    assert any("Dog Feeding Frequency" in c for c in texts(at.caption))
+    assert added == []  # nothing is added until the user clicks Add
 
 
-def test_add_button_adds_the_suggested_task(stub, added):
-    stub([sug("Morning walk", 30)])
+def test_suggestions_match_the_pets_species_and_life_stage():
+    at, _, _ = make_app(species=Species.CAT, age=12)
+    at.run()
+    at = click(at, "Suggest care tasks")
+    shown = " ".join(texts(at.markdown))
+    assert "Scoop litter box" in shown and "Senior wellness exam" in shown
+    assert "Morning walk" not in shown and "Kitten vaccination visit" not in shown
+
+
+def test_add_button_adds_the_suggested_task(added):
     at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")
     at = click(at, "Add to schedule")
     assert not at.exception
     (task,) = added
-    assert (task.description, task.duration) == ("Morning walk", 30)
+    assert (task.description, task.duration) == ("Breakfast feeding", 10)
     assert task.priority is Priority.HIGH and task.recurrence is Recurrence.DAILY
     assert task.start_time.hour == 8  # default start time
-    assert any("Added 'Morning walk'" in s.value for s in at.success)
+    assert any("Added 'Breakfast feeding'" in s.value for s in at.success)
 
 
-def test_start_time_edit_is_used(stub, added):
-    from datetime import time
-
-    stub([sug("Morning walk")])
+def test_start_time_edit_is_used(added):
     at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")
@@ -105,71 +99,29 @@ def test_start_time_edit_is_used(stub, added):
     assert (added[0].start_time.hour, added[0].start_time.minute) == (17, 15)
 
 
-def test_added_suggestion_cannot_be_added_twice(stub, added):
-    stub([sug("Morning walk")])
+def test_added_suggestion_cannot_be_added_twice(added):
     at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")
     at = click(at, "Add to schedule")
-    at.run()  # the next rerun replaces the button with an "Added" note
-    assert not [b for b in at.button if b.label == "Add to schedule"]
+    at.run()  # the next rerun replaces that card's button with an "Added" note
     assert len(added) == 1
     assert any("Added to the schedule" in s.value for s in at.success)
 
 
-def test_adding_a_clashing_task_warns_but_still_adds(stub, added):
-    from datetime import datetime
-
-    from pawpal_system import Task
-
-    stub([sug("Morning walk", 30)])
-    at, owner, pet = make_app()
-    pet.add_task(Task("Vet visit", datetime.combine(datetime.now().date(), datetime.min.time()).replace(hour=8), 60))
+def test_adding_a_clashing_task_warns_but_still_adds(added):
+    at, _, pet = make_app()
+    pet.add_task(Task("Vet visit", datetime.combine(datetime.now().date(), time(8, 0)), 60))
     added.clear()
     at.run()
     at = click(at, "Suggest care tasks")
-    at = click(at, "Add to schedule")
+    at = click(at, "Add to schedule")  # first suggestion starts at 8:00, inside the vet visit
     assert len(added) == 1  # still added
     assert any("Heads up" in w.value and "Vet visit" in w.value for w in at.warning)
 
 
-def test_api_failure_falls_back_to_guide_suggestions_with_a_notice(stub, added):
-    stub(SuggestionError("Couldn't reach the AI service. Try again in a moment."))
-    at, _, _ = make_app()
-    at.run()
-    at = click(at, "Suggest care tasks")
-    assert not at.exception
-    assert any("AI suggestions are unavailable" in w.value and "reach the AI service" in w.value
-               for w in at.warning)
-    assert any("Morning walk" in m for m in texts(at.markdown))  # from dog_exercise's task list
-    assert any("Dog Exercise Needs" in c for c in texts(at.caption))
-    assert added == []  # still nothing added without a click
-
-
-def test_no_api_key_shows_guide_suggestions_without_any_warning(stub, added):
-    stub(NotConfiguredError("No API credentials found. Set the ANTHROPIC_API_KEY environment variable."))
-    at, _, _ = make_app()
-    at.run()
-    at = click(at, "Suggest care tasks")
-    assert not at.exception
-    assert not at.warning and not at.error  # no "unavailable" notice on a machine without a key
-    assert any("Morning walk" in m for m in texts(at.markdown))
-    assert any("Dog Exercise Needs" in c for c in texts(at.caption))
-
-
-def test_fallback_suggestions_can_be_added(stub, added):
-    stub(NotConfiguredError("No API credentials found."))
-    at, _, _ = make_app()
-    at.run()
-    at = click(at, "Suggest care tasks")
-    at = click(at, "Add to schedule")
-    assert not at.exception
-    assert len(added) == 1 and added[0].duration > 0
-    assert any("Added '" in s.value for s in at.success)
-
-
-def test_empty_result_shows_a_friendly_message(stub):
-    stub([])
+def test_empty_result_shows_a_friendly_message(monkeypatch):
+    monkeypatch.setattr(suggestions, "suggest_from_guides", lambda pet, **kwargs: [])
     at, _, _ = make_app()
     at.run()
     at = click(at, "Suggest care tasks")
@@ -177,7 +129,7 @@ def test_empty_result_shows_a_friendly_message(stub):
     assert any("No new tasks to suggest" in i.value for i in at.info)
 
 
-def test_species_any_shows_a_hint(stub):
+def test_species_any_shows_a_hint():
     at, _, _ = make_app(species=Species.ANY)
     at.run()
     assert any("species is 'Any'" in c.value for c in at.caption)
