@@ -158,20 +158,41 @@ def test_species_any_means_no_species_filter():
 
 
 def test_retrieve_for_puppy_returns_puppy_guide_and_no_senior_or_cat_guides():
-    found = ids(retrieve_for_pet(make_pet(age=0), k=10))
+    found = ids(retrieve_for_pet(make_pet(age=0)))
     assert "puppy_care" in found
     assert "senior_pet_care" not in found
     assert not any(i.startswith("cat_") for i in found)
 
 
 def test_retrieve_for_senior_cat_returns_senior_guide_and_no_puppy_or_dog_guides():
-    found = ids(retrieve_for_pet(make_pet(age=12, species=Species.CAT, breed="Tabby"), k=10))
+    found = ids(retrieve_for_pet(make_pet(age=12, species=Species.CAT, breed="Tabby")))
     assert "senior_pet_care" in found
     assert "puppy_care" not in found
     assert not any(i.startswith("dog_") for i in found)
 
 
 def test_retrieve_for_adult_dog_excludes_stage_specific_guides():
-    found = ids(retrieve_for_pet(make_pet(age=3), k=15))
+    found = ids(retrieve_for_pet(make_pet(age=3)))
     assert "puppy_care" not in found and "senior_pet_care" not in found
     assert any(i.startswith("dog_") for i in found)
+
+
+def test_retrieve_for_adult_dog_covers_every_care_topic():
+    found = ids(retrieve_for_pet(make_pet(age=3)))
+    assert found == [
+        "dog_feeding", "dog_exercise", "dog_vaccinations_preventive_care",
+        "dog_nail_care", "medication_administration", "toxic_foods_and_hazards",
+    ]
+
+
+def test_retrieve_for_pet_has_no_duplicates_and_respects_per_topic():
+    pet = make_pet(age=3, species=Species.ANY, breed="")  # dog + cat guides are all eligible
+    one = ids(retrieve_for_pet(pet))
+    two = ids(retrieve_for_pet(pet, per_topic=2))
+    assert len(one) == len(set(one)) and len(two) == len(set(two))
+    assert len(two) > len(one)
+
+
+def test_retrieve_for_pet_with_species_any_spans_dog_and_cat_guides():
+    found = ids(retrieve_for_pet(make_pet(age=3, species=Species.ANY, breed="")))
+    assert len(found) == len(set(found)) and len(found) >= 5

@@ -240,12 +240,40 @@ def build_query(pet: "Pet") -> str:
     return " ".join(parts)
 
 
-def retrieve_for_pet(pet: "Pet", retriever: Optional[Retriever] = None, k: int = 5) -> List[Hit]:
-    """Retrieve the guides most relevant to one pet, filtered by its species and life stage."""
+# One short query per care topic, so every topic is covered instead of whichever
+# guides happen to match a single generic query.
+TOPIC_QUERIES = {
+    "feeding": "feeding meals food water",
+    "exercise": "exercise walk play enrichment",
+    "vet care": "vaccines vet wellness exam checkup",
+    "grooming": "grooming brushing nails litter",
+    "medication": "medication pills dosing",
+    "safety": "toxic poison safety hazard chocolate",
+}
+
+
+def retrieve_for_pet(pet: "Pet", retriever: Optional[Retriever] = None, per_topic: int = 1) -> List[Hit]:
+    """Retrieve guides covering each care topic for one pet.
+
+    Runs one query per entry in ``TOPIC_QUERIES`` (plus one for the pet's life
+    stage if it is not an adult), always filtered by the pet's species and life
+    stage. Takes the best ``per_topic`` guides per query that earlier queries
+    haven't already returned, so the result has no duplicates and is ordered by topic.
+    """
     retriever = retriever or Retriever()
-    return retriever.retrieve(
-        build_query(pet),
-        k=k,
-        species=pet.species.value,
-        life_stage=life_stage_for(pet),
-    )
+    species = pet.species.value
+    stage = life_stage_for(pet)
+
+    queries = list(TOPIC_QUERIES.values())
+    if stage and stage != "adult":
+        queries.append(" ".join(p for p in (species if species != "any" else "", stage) if p))
+
+    results: List[Hit] = []
+    seen = set()
+    for query in queries:
+        candidates = retriever.retrieve(
+            query, k=len(retriever.chunks), species=species, life_stage=stage)
+        fresh = [h for h in candidates if h.chunk.id not in seen][:per_topic]
+        seen.update(h.chunk.id for h in fresh)
+        results.extend(fresh)
+    return results
